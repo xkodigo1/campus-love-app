@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "campus-love-app", "campus-love-app.csproj", "{FED0F5F0-B908-66C2-8751-8DF49B8AEC2A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FED0F5F0-B908-66C2-8751-8DF49B8AEC2A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FED0F5F0-B908-66C2-8751-8DF49B8AEC2A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FED0F5F0-B908-66C2-8751-8DF49B8AEC2A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FED0F5F0-B908-66C2-8751-8DF49B8AEC2A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {28D89F2C-B456-4C30-B7C7-78CD0C0E70DD}
+	EndGlobalSection
+EndGlobal
