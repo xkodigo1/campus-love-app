@@ -14,7 +14,7 @@ namespace campus_love_app.infrastructure.mysql
 
         private SingletonConnection()
         {
-            string connectionString = "server=localhost;port=3306;database=campus-love-db;user=root;password=kodigo777;";
+            string connectionString = "server=localhost;port=3306;database=campuslove_db;user=root;password=kodigo777;";
             
             _connection = new MySqlConnection(connectionString);
         }
