@@ -1,6 +1,6 @@
-CREATE DATABASE IF NOT EXISTS campus-love-db;
+CREATE DATABASE IF NOT EXISTS campuslove_db;
 
-USE campus-love-db;
+USE campuslove_db;
 
 -- 1. Lookup Tables First (no dependencies)
 CREATE TABLE Genders (
