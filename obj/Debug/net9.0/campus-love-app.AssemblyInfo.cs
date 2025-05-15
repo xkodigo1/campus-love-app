@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("campus-love-app")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d1cc9803bc86bad6f9e8d74e0a328a4e9bfbf9b9")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+80f97d6340e6e1eb6e088a83520141b4b7ec9f2f")]
 [assembly: System.Reflection.AssemblyProductAttribute("campus-love-app")]
 [assembly: System.Reflection.AssemblyTitleAttribute("campus-love-app")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
