@@ -25,12 +25,16 @@ namespace campus_love_app
             // Initialize repositories
             IUserRepository userRepository = new UserRepository();
             IUserAccountRepository accountRepository = new UserAccountRepository();
+            ILocationRepository locationRepository = new LocationRepository();
+            ICareerRepository careerRepository = new CareerRepository();
+            IGenderRepository genderRepository = new GenderRepository();
+            ISexualOrientationRepository orientationRepository = new SexualOrientationRepository();
             
             // Initialize services
             var loginService = new LoginService(userRepository, accountRepository);
 
             // Initialize the UI
-            var ui = new ConsoleUI();
+            var ui = new ConsoleUI(locationRepository, careerRepository, genderRepository, orientationRepository);
 
             // Show the welcome screen
             ui.ShowWelcome();

@@ -8,6 +8,6 @@ namespace campus_love_app.domain.entities
     public class Gender
     {
         public int GenderID { get; set; }
-        public string Description { get; set; } = string.Empty;
+        public string GenderName { get; set; } = string.Empty;
     }
 }

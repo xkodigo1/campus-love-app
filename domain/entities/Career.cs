@@ -8,6 +8,6 @@ namespace campus_love_app.domain.entities
     public class Career
     {
         public int CareerID { get; set; }
-        public string Name { get; set; } = string.Empty;
+        public string CareerName { get; set; } = string.Empty;
     }
 }

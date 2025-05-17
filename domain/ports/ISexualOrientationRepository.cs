@@ -8,6 +8,6 @@ namespace campus_love_app.domain.ports
 {
     public interface ISexualOrientationRepository
     {
-        List<SexualOrientation> GetAll();
+        List<SexualOrientation> GetAllOrientations();
     }
 }
