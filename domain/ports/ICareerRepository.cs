@@ -8,6 +8,7 @@ namespace campus_love_app.domain.ports
 {
     public interface ICareerRepository
     {
-        List<Career> GetAll();
+        List<Career> GetAllCareers();
+        int GetOrCreateCareer(string careerName);
     }
 }

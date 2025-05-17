@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using campus_love_app.domain.entities;
+using campus_love_app.domain.ports;
 using Spectre.Console;
 
 namespace campus_love_app.application.ui
@@ -11,12 +12,41 @@ namespace campus_love_app.application.ui
         private readonly string _appName = "Campus Love";
         private readonly string _appVersion = "v1.0";
         private User? _currentUser;
+        private UserAccount? _currentAccount;
+        private readonly ILocationRepository? _locationRepository;
+        private readonly ICareerRepository? _careerRepository;
+        private readonly IGenderRepository? _genderRepository;
+        private readonly ISexualOrientationRepository? _orientationRepository;
 
         public ConsoleUI() { }
+
+        public ConsoleUI(ILocationRepository locationRepository, ICareerRepository careerRepository,
+                        IGenderRepository genderRepository, ISexualOrientationRepository orientationRepository)
+        {
+            _locationRepository = locationRepository;
+            _careerRepository = careerRepository;
+            _genderRepository = genderRepository;
+            _orientationRepository = orientationRepository;
+        }
 
         public void SetCurrentUser(User user)
         {
             _currentUser = user;
+        }
+        
+        public void SetCurrentAccount(UserAccount account)
+        {
+            _currentAccount = account;
+        }
+
+        public bool IsUserLoggedIn()
+        {
+            return _currentUser != null;
+        }
+        
+        public User? GetCurrentUser()
+        {
+            return _currentUser;
         }
 
         public void ShowWelcome()
@@ -62,22 +92,405 @@ namespace campus_love_app.application.ui
                 ShowUserProfileSummary(_currentUser);
             }
 
+            var choices = new List<string>();
+            
+            if (_currentUser == null)
+            {
+                // User is not logged in
+                choices.Add("1. Login");
+                choices.Add("2. Register");
+                choices.Add("3. Exit");
+            }
+            else
+            {
+                // User is logged in
+                choices.Add("1. View profiles");
+                choices.Add("2. View matches");
+                choices.Add("3. View statistics");
+                choices.Add("4. Logout");
+                choices.Add("5. Exit");
+            }
+
             // Create a selector for the main menu
             var option = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title("[magenta]What would you like to do?[/]")
                     .PageSize(10)
                     .HighlightStyle(new Style(foreground: Color.HotPink))
-                    .AddChoices(new[] {
-                        "1. Register as a new user",
-                        "2. View profiles",
-                        "3. View matches",
-                        "4. View statistics",
-                        "5. Exit"
-                    }));
+                    .AddChoices(choices));
 
             // Convert the selection to an option number
             return int.Parse(option.Split('.')[0]);
+        }
+
+        public (string email, string username, string password, User user) ShowRegistrationScreen()
+        {
+            Console.Clear();
+            DrawHeader("Registration");
+            
+            var fullName = AnsiConsole.Ask<string>("[magenta]Full Name:[/]");
+            var age = AnsiConsole.Ask<int>("[magenta]Age (must be 18+):[/]", 18);
+            var email = AnsiConsole.Ask<string>("[magenta]Email:[/]");
+            var username = AnsiConsole.Ask<string>("[magenta]Username:[/]");
+            var password = AnsiConsole.Prompt(
+                new TextPrompt<string>("[magenta]Password:[/]")
+                    .PromptStyle("magenta")
+                    .Secret()
+            );
+            var confirmPassword = AnsiConsole.Prompt(
+                new TextPrompt<string>("[magenta]Confirm Password:[/]")
+                    .PromptStyle("magenta")
+                    .Secret()
+            );
+            
+            if (password != confirmPassword)
+            {
+                throw new Exception("Passwords do not match");
+            }
+            
+            var user = new User
+            {
+                FullName = fullName,
+                Age = age
+            };
+            
+            return (email, username, password, user);
+        }
+
+        public (string usernameOrEmail, string password) ShowLoginScreen()
+        {
+            Console.Clear();
+            DrawHeader("Login");
+            
+            var usernameOrEmail = AnsiConsole.Ask<string>("[magenta]Username or Email:[/]");
+            
+            var password = AnsiConsole.Prompt(
+                new TextPrompt<string>("[magenta]Password:[/]")
+                    .PromptStyle("magenta")
+                    .Secret()
+            );
+            
+            return (usernameOrEmail, password);
+        }
+
+        public User ShowUserProfileCreationScreen(User baseUser)
+        {
+            Console.Clear();
+            DrawHeader("Complete Your Profile");
+            
+            AnsiConsole.MarkupLine("[bold]Complete your profile to start finding matches![/]");
+            AnsiConsole.WriteLine();
+            
+            // Here we'll collect the remaining user information
+            var profilePhrase = AnsiConsole.Ask<string>("[magenta]Your profile phrase:[/]");
+            
+            // Gender selection
+            int genderId = 1;
+            if (_genderRepository != null)
+            {
+                var genders = _genderRepository.GetAllGenders();
+                if (genders.Count > 0)
+                {
+                    var genderSelection = AnsiConsole.Prompt(
+                        new SelectionPrompt<Gender>()
+                            .Title("[magenta]Select your gender:[/]")
+                            .PageSize(Math.Max(3, Math.Min(10, genders.Count)))
+                            .HighlightStyle(new Style(foreground: Color.HotPink))
+                            .UseConverter(g => g.GenderName)
+                            .AddChoices(genders));
+                    
+                    genderId = genderSelection.GenderID;
+                }
+                else
+                {
+                    AnsiConsole.MarkupLine("[yellow]Warning: No genders found in database. Using default value.[/]");
+                }
+            }
+            else
+            {
+                var genderId_str = AnsiConsole.Prompt(
+                    new SelectionPrompt<string>()
+                        .Title("[magenta]Select your gender:[/]")
+                        .PageSize(3)
+                        .HighlightStyle(new Style(foreground: Color.HotPink))
+                        .AddChoices(new[] {
+                            "1. Male",
+                            "2. Female",
+                            "3. Other"
+                        }));
+                
+                genderId = int.Parse(genderId_str.Split('.')[0]);
+            }
+            
+            // Sexual orientation selection
+            int orientationId = 1;
+            if (_orientationRepository != null)
+            {
+                var orientations = _orientationRepository.GetAllOrientations();
+                if (orientations.Count > 0)
+                {
+                    var orientationSelection = AnsiConsole.Prompt(
+                        new SelectionPrompt<SexualOrientation>()
+                            .Title("[magenta]Select your sexual orientation:[/]")
+                            .PageSize(Math.Max(3, Math.Min(10, orientations.Count)))
+                            .HighlightStyle(new Style(foreground: Color.HotPink))
+                            .UseConverter(o => o.OrientationName)
+                            .AddChoices(orientations));
+                    
+                    orientationId = orientationSelection.OrientationID;
+                }
+                else
+                {
+                    AnsiConsole.MarkupLine("[yellow]Warning: No orientations found in database. Using default value.[/]");
+                }
+            }
+            else
+            {
+                var orientationId_str = AnsiConsole.Prompt(
+                    new SelectionPrompt<string>()
+                        .Title("[magenta]Select your sexual orientation:[/]")
+                        .PageSize(4)
+                        .HighlightStyle(new Style(foreground: Color.HotPink))
+                        .AddChoices(new[] {
+                            "1. Straight",
+                            "2. Gay",
+                            "3. Bisexual",
+                            "4. Other"
+                        }));
+                
+                orientationId = int.Parse(orientationId_str.Split('.')[0]);
+            }
+            
+            // Career selection
+            int careerId = 1;
+            if (_careerRepository != null)
+            {
+                try 
+                {
+                    // Get existing careers
+                    var careers = _careerRepository.GetAllCareers();
+                    
+                    // Add option to enter a new career
+                    string enterNewCareerOption = "Enter new career...";
+                    
+                    // Display careers if any exist
+                    List<string> careerOptions = new List<string>();
+                    if (careers.Count > 0)
+                    {
+                        careerOptions = careers.Select(c => c.CareerName).ToList();
+                        careerOptions.Add(enterNewCareerOption);
+                        
+                        var careerChoice = AnsiConsole.Prompt(
+                            new SelectionPrompt<string>()
+                                .Title("[magenta]Select your career:[/]")
+                                .PageSize(Math.Max(3, Math.Min(10, careerOptions.Count)))
+                                .HighlightStyle(new Style(foreground: Color.HotPink))
+                                .AddChoices(careerOptions));
+                        
+                        if (careerChoice == enterNewCareerOption)
+                        {
+                            // User wants to enter a new career
+                            var careerName = AnsiConsole.Ask<string>("[magenta]Enter your career:[/]");
+                            careerId = _careerRepository.GetOrCreateCareer(careerName);
+                        }
+                        else
+                        {
+                            // User selected an existing career
+                            var selectedCareer = careers.FirstOrDefault(c => c.CareerName == careerChoice);
+                            if (selectedCareer != null)
+                            {
+                                careerId = selectedCareer.CareerID;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // No careers exist yet, just ask for input
+                        var careerName = AnsiConsole.Ask<string>("[magenta]Enter your career:[/]");
+                        careerId = _careerRepository.GetOrCreateCareer(careerName);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AnsiConsole.MarkupLine($"[bold red]Error handling careers:[/] {ex.Message}");
+                    AnsiConsole.WriteLine("Using default career instead.");
+                    AnsiConsole.WriteLine();
+                    PressAnyKey();
+                }
+            }
+            else
+            {
+                // Manual entry if repository is not available
+                var careerName = AnsiConsole.Ask<string>("[magenta]Your career:[/]");
+                AnsiConsole.MarkupLine("[grey]Note: Career information saved for reference only in this demo.[/]");
+            }
+            
+            // Location selection
+            int cityId = 1; // Default value
+            
+            if (_locationRepository != null)
+            {
+                try 
+                {
+                    // Step 1: Select country
+                    var selectedCountry = SelectCountry();
+                    if (selectedCountry != null)
+                    {
+                        // Step 2: Select region
+                        var selectedRegion = SelectRegion(selectedCountry.CountryID);
+                        if (selectedRegion != null)
+                        {
+                            // Step 3: Select city
+                            var selectedCity = SelectCity(selectedRegion.RegionID);
+                            if (selectedCity != null)
+                            {
+                                cityId = selectedCity.CityID;
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AnsiConsole.MarkupLine($"[bold red]Error loading locations:[/] {ex.Message}");
+                    AnsiConsole.WriteLine("Using default location instead.");
+                    AnsiConsole.WriteLine();
+                    PressAnyKey();
+                }
+            }
+            else
+            {
+                // Manual entry if repository is not available
+                var countryName = AnsiConsole.Ask<string>("[magenta]Your country:[/]");
+                var regionName = AnsiConsole.Ask<string>("[magenta]Your region/state:[/]");
+                var cityName = AnsiConsole.Ask<string>("[magenta]Your city:[/]");
+                AnsiConsole.MarkupLine("[grey]Note: Location information saved for reference only in this demo.[/]");
+            }
+            
+            var minAge = AnsiConsole.Ask<int>("[magenta]Minimum preferred age:[/]", 18);
+            var maxAge = AnsiConsole.Ask<int>("[magenta]Maximum preferred age:[/]", 100);
+            
+            // Apply the values to the base user
+            baseUser.ProfilePhrase = profilePhrase;
+            baseUser.GenderID = genderId;
+            baseUser.OrientationID = orientationId;
+            baseUser.CareerID = careerId;
+            baseUser.CityID = cityId;
+            baseUser.MinPreferredAge = minAge;
+            baseUser.MaxPreferredAge = maxAge;
+            
+            return baseUser;
+        }
+
+        // Helper methods for location selection
+        private Country? SelectCountry()
+        {
+            if (_locationRepository == null)
+                return null;
+            
+            var countries = _locationRepository.GetAllCountries();
+            
+            if (countries.Count == 0)
+            {
+                // If no countries exist, allow creating one
+                var countryName = AnsiConsole.Ask<string>("[magenta]Enter your country name:[/]");
+                int countryId = _locationRepository.GetOrCreateCountry(countryName);
+                return new Country { CountryID = countryId, CountryName = countryName };
+            }
+            
+            // Add option to create a new country
+            countries.Add(new Country { CountryID = -1, CountryName = "Create new country..." });
+            
+            var selection = AnsiConsole.Prompt(
+                new SelectionPrompt<Country>()
+                    .Title("[magenta]Select your country:[/]")
+                    .PageSize(Math.Max(3, Math.Min(10, countries.Count)))
+                    .HighlightStyle(new Style(foreground: Color.HotPink))
+                    .UseConverter(c => c.CountryName)
+                    .AddChoices(countries));
+            
+            if (selection.CountryID == -1)
+            {
+                // User chose to create a new country
+                var countryName = AnsiConsole.Ask<string>("[magenta]Enter country name:[/]");
+                int countryId = _locationRepository.GetOrCreateCountry(countryName);
+                return new Country { CountryID = countryId, CountryName = countryName };
+            }
+            
+            return selection;
+        }
+        
+        private campus_love_app.domain.entities.Region? SelectRegion(int countryId)
+        {
+            if (_locationRepository == null)
+                return null;
+            
+            var regions = _locationRepository.GetRegionsByCountryId(countryId);
+            
+            if (regions.Count == 0)
+            {
+                // If no regions exist for this country, allow creating one
+                var regionName = AnsiConsole.Ask<string>("[magenta]Enter your state/region:[/]");
+                int regionId = _locationRepository.GetOrCreateRegion(regionName, countryId);
+                return new campus_love_app.domain.entities.Region { RegionID = regionId, RegionName = regionName, CountryID = countryId };
+            }
+            
+            // Add option to create a new region
+            regions.Add(new campus_love_app.domain.entities.Region { RegionID = -1, RegionName = "Create new state/region...", CountryID = countryId });
+            
+            var selection = AnsiConsole.Prompt(
+                new SelectionPrompt<campus_love_app.domain.entities.Region>()
+                    .Title("[magenta]Select your state/region:[/]")
+                    .PageSize(Math.Max(3, Math.Min(10, regions.Count)))
+                    .HighlightStyle(new Style(foreground: Color.HotPink))
+                    .UseConverter(r => r.RegionName)
+                    .AddChoices(regions));
+            
+            if (selection.RegionID == -1)
+            {
+                // User chose to create a new region
+                var regionName = AnsiConsole.Ask<string>("[magenta]Enter state/region name:[/]");
+                int regionId = _locationRepository.GetOrCreateRegion(regionName, countryId);
+                return new campus_love_app.domain.entities.Region { RegionID = regionId, RegionName = regionName, CountryID = countryId };
+            }
+            
+            return selection;
+        }
+        
+        private City? SelectCity(int regionId)
+        {
+            if (_locationRepository == null)
+                return null;
+            
+            var cities = _locationRepository.GetCitiesByRegionId(regionId);
+            
+            if (cities.Count == 0)
+            {
+                // If no cities exist for this region, allow creating one
+                var cityName = AnsiConsole.Ask<string>("[magenta]Enter your city:[/]");
+                int cityId = _locationRepository.GetOrCreateCity(cityName, regionId);
+                return new City { CityID = cityId, CityName = cityName, RegionID = regionId };
+            }
+            
+            // Add option to create a new city
+            cities.Add(new City { CityID = -1, CityName = "Create new city...", RegionID = regionId });
+            
+            var selection = AnsiConsole.Prompt(
+                new SelectionPrompt<City>()
+                    .Title("[magenta]Select your city:[/]")
+                    .PageSize(Math.Max(3, Math.Min(10, cities.Count)))
+                    .HighlightStyle(new Style(foreground: Color.HotPink))
+                    .UseConverter(c => c.CityName)
+                    .AddChoices(cities));
+            
+            if (selection.CityID == -1)
+            {
+                // User chose to create a new city
+                var cityName = AnsiConsole.Ask<string>("[magenta]Enter city name:[/]");
+                int cityId = _locationRepository.GetOrCreateCity(cityName, regionId);
+                return new City { CityID = cityId, CityName = cityName, RegionID = regionId };
+            }
+            
+            return selection;
         }
 
         public void ShowUserProfile(User user, bool isMatchScreen = false)
@@ -164,7 +577,7 @@ namespace campus_love_app.application.ui
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title("[yellow]What would you like to do?[/]")
-                    .PageSize(Math.Min(10, matches.Count + 1))
+                    .PageSize(Math.Max(3, Math.Min(10, matches.Count + 1)))
                     .HighlightStyle(new Style(foreground: Color.Yellow))
                     .AddChoices(options));
             
@@ -217,6 +630,14 @@ namespace campus_love_app.application.ui
         public void ShowSuccess(string message)
         {
             AnsiConsole.MarkupLine($"[bold green]✓[/] {message}");
+            PressAnyKey();
+        }
+        
+        public void ShowLogout()
+        {
+            AnsiConsole.MarkupLine("[bold green]You have been successfully logged out.[/]");
+            _currentUser = null;
+            _currentAccount = null;
             PressAnyKey();
         }
 

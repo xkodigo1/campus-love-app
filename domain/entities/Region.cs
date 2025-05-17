@@ -8,7 +8,7 @@ namespace campus_love_app.domain.entities
     public class Region
     {
         public int RegionID { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public int CountryID { get; set;}
+        public string RegionName { get; set; } = string.Empty;
+        public int CountryID { get; set; }
     }
 }

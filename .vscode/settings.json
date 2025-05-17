@@ -2,6 +2,9 @@
     "conventionalCommits.scopes": [
         "interfaces",
         "ui",
-        "release"
+        "release",
+        "auth",
+        "data",
+        "database"
     ]
 }

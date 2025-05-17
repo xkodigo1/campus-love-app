@@ -8,6 +8,6 @@ namespace campus_love_app.domain.ports
 {
     public interface IGenderRepository
     {
-        List<Gender> GetAll();
+        List<Gender> GetAllGenders();
     }
 }

@@ -9,7 +9,10 @@ namespace campus_love_app.domain.ports
     public interface ILocationRepository
     {
         List<Country> GetAllCountries();
-        List<Region> GetRegionsByCountry(int countryId);
-        List<City> GetCitiesByRegion(int regionId);
+        List<Region> GetRegionsByCountryId(int countryId);
+        List<City> GetCitiesByRegionId(int regionId);
+        int GetOrCreateCountry(string countryName);
+        int GetOrCreateRegion(string regionName, int countryId);
+        int GetOrCreateCity(string cityName, int regionId);
     }
 }
