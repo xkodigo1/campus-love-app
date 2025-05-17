@@ -1,5 +1,6 @@
 {
     "conventionalCommits.scopes": [
-        "interfaces"
+        "interfaces",
+        "ui"
     ]
 }
