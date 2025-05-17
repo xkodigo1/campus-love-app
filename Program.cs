@@ -14,7 +14,7 @@ namespace campus_love_app
                 return; // Exit if connection fails
             }
         }
-        public static void ShowError(string message, Exception ex = null)
+        public static void ShowError(string message, Exception? ex = null)
         {
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine($"✗ {message}");

@@ -9,7 +9,7 @@ namespace campus_love_app.infrastructure.mysql
 {
    public class SingletonConnection
     {
-        private static SingletonConnection _instance;
+        private static SingletonConnection? _instance;
         private MySqlConnection _connection;
 
         private SingletonConnection()

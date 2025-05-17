@@ -10,7 +10,7 @@ namespace campus_love_app.domain.ports
     {
         void RegisterUser(User user);
         List<User> GetAvailableProfiles(int userId);
-        void LikeUswer(int fromUserId, int toUserId);
+        void LikeUser(int fromUserId, int toUserId);
         List<User> GetMatches(int userId);
     }
 }
