@@ -65,6 +65,19 @@ CREATE TABLE Users (
     CONSTRAINT chk_preferred_age CHECK (MinPreferredAge >= 18 AND MaxPreferredAge >= MinPreferredAge)
 );
 
+-- User Account Table for Login
+CREATE TABLE UserAccounts (
+    AccountID INT PRIMARY KEY AUTO_INCREMENT,
+    UserID INT NOT NULL,
+    Email VARCHAR(100) NOT NULL UNIQUE,
+    Username VARCHAR(50) NOT NULL UNIQUE,
+    PasswordHash VARCHAR(255) NOT NULL,
+    LastLoginDate DATETIME,
+    IsActive BOOLEAN NOT NULL DEFAULT TRUE,
+    CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (UserID) REFERENCES Users(UserID)
+);
+
 -- 3. Many-to-Many Table for Interests
 CREATE TABLE UserInterests (
     UserID INT,

@@ -220,8 +220,8 @@ namespace campus_love_app.infrastructure.repositories
             return matches;
         }
 
-        // Helper method to get a user by ID
-        private User GetUserById(int userId)
+        // Get a user by ID
+        public User? GetUserById(int userId)
         {
             User user = null;
             

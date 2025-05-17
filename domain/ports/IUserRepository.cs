@@ -12,5 +12,6 @@ namespace campus_love_app.domain.ports
         List<User> GetAvailableProfiles(int userId);
         void LikeUser(int fromUserId, int toUserId);
         List<User> GetMatches(int userId);
+        User? GetUserById(int userId);
     }
 }

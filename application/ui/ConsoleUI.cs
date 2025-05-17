@@ -11,12 +11,18 @@ namespace campus_love_app.application.ui
         private readonly string _appName = "Campus Love";
         private readonly string _appVersion = "v1.0";
         private User? _currentUser;
+        private UserAccount? _currentAccount;
 
         public ConsoleUI() { }
 
         public void SetCurrentUser(User user)
         {
             _currentUser = user;
+        }
+        
+        public void SetCurrentAccount(UserAccount account)
+        {
+            _currentAccount = account;
         }
 
         public void ShowWelcome()
@@ -62,22 +68,117 @@ namespace campus_love_app.application.ui
                 ShowUserProfileSummary(_currentUser);
             }
 
+            var choices = new List<string>();
+            
+            if (_currentUser == null)
+            {
+                // User is not logged in
+                choices.Add("1. Login");
+                choices.Add("2. Register");
+                choices.Add("3. Exit");
+            }
+            else
+            {
+                // User is logged in
+                choices.Add("1. View profiles");
+                choices.Add("2. View matches");
+                choices.Add("3. View statistics");
+                choices.Add("4. Logout");
+                choices.Add("5. Exit");
+            }
+
             // Create a selector for the main menu
             var option = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title("[magenta]What would you like to do?[/]")
                     .PageSize(10)
                     .HighlightStyle(new Style(foreground: Color.HotPink))
-                    .AddChoices(new[] {
-                        "1. Register as a new user",
-                        "2. View profiles",
-                        "3. View matches",
-                        "4. View statistics",
-                        "5. Exit"
-                    }));
+                    .AddChoices(choices));
 
             // Convert the selection to an option number
             return int.Parse(option.Split('.')[0]);
+        }
+
+        public (string email, string username, string password, User user) ShowRegistrationScreen()
+        {
+            Console.Clear();
+            DrawHeader("Registration");
+            
+            var fullName = AnsiConsole.Ask<string>("[magenta]Full Name:[/]");
+            var age = AnsiConsole.Ask<int>("[magenta]Age (must be 18+):[/]", 18);
+            var email = AnsiConsole.Ask<string>("[magenta]Email:[/]");
+            var username = AnsiConsole.Ask<string>("[magenta]Username:[/]");
+            var password = AnsiConsole.Prompt(
+                new TextPrompt<string>("[magenta]Password:[/]")
+                    .PromptStyle("magenta")
+                    .Secret()
+            );
+            var confirmPassword = AnsiConsole.Prompt(
+                new TextPrompt<string>("[magenta]Confirm Password:[/]")
+                    .PromptStyle("magenta")
+                    .Secret()
+            );
+            
+            if (password != confirmPassword)
+            {
+                throw new Exception("Passwords do not match");
+            }
+            
+            var user = new User
+            {
+                FullName = fullName,
+                Age = age
+            };
+            
+            return (email, username, password, user);
+        }
+
+        public (string usernameOrEmail, string password) ShowLoginScreen()
+        {
+            Console.Clear();
+            DrawHeader("Login");
+            
+            var usernameOrEmail = AnsiConsole.Ask<string>("[magenta]Username or Email:[/]");
+            
+            var password = AnsiConsole.Prompt(
+                new TextPrompt<string>("[magenta]Password:[/]")
+                    .PromptStyle("magenta")
+                    .Secret()
+            );
+            
+            return (usernameOrEmail, password);
+        }
+
+        public User ShowUserProfileCreationScreen(User baseUser)
+        {
+            Console.Clear();
+            DrawHeader("Complete Your Profile");
+            
+            AnsiConsole.MarkupLine("[bold]Complete your profile to start finding matches![/]");
+            AnsiConsole.WriteLine();
+            
+            // Here we'll collect the remaining user information
+            var profilePhrase = AnsiConsole.Ask<string>("[magenta]Your profile phrase:[/]");
+            
+            // These would typically be rendered as selection menus with options from the database
+            var genderId = AnsiConsole.Ask<int>("[magenta]Gender (1: Male, 2: Female):[/]");
+            var orientationId = AnsiConsole.Ask<int>("[magenta]Sexual Orientation (1: Straight, 2: Gay, 3: Bisexual):[/]");
+            var careerId = AnsiConsole.Ask<int>("[magenta]Career (ID):[/]");
+            var cityId = AnsiConsole.Ask<int>("[magenta]City (ID):[/]");
+            
+            var minAge = AnsiConsole.Ask<int>("[magenta]Minimum preferred age:[/]", 18);
+            var maxAge = AnsiConsole.Ask<int>("[magenta]Maximum preferred age:[/]", 100);
+            
+            // Apply the values to the base user
+            baseUser.ProfilePhrase = profilePhrase;
+            baseUser.GenderID = genderId;
+            baseUser.OrientationID = orientationId;
+            baseUser.CareerID = careerId;
+            baseUser.CityID = cityId;
+            baseUser.MinPreferredAge = minAge;
+            baseUser.MaxPreferredAge = maxAge;
+            
+            return baseUser;
         }
 
         public void ShowUserProfile(User user, bool isMatchScreen = false)
@@ -217,6 +318,14 @@ namespace campus_love_app.application.ui
         public void ShowSuccess(string message)
         {
             AnsiConsole.MarkupLine($"[bold green]✓[/] {message}");
+            PressAnyKey();
+        }
+        
+        public void ShowLogout()
+        {
+            AnsiConsole.MarkupLine("[bold green]You have been successfully logged out.[/]");
+            _currentUser = null;
+            _currentAccount = null;
             PressAnyKey();
         }
 
