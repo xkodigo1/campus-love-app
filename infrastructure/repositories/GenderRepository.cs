@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using campus_love_app.domain.entities;
 using campus_love_app.domain.ports;
@@ -13,12 +14,14 @@ namespace campus_love_app.infrastructure.repositories
         public GenderRepository()
         {
             _connection = SingletonConnection.Instance.GetConnection();
+            EnsureDefaultGendersExist();
         }
 
-        public List<Gender> GetAll()
+        public List<Gender> GetAllGenders()
         {
             var genders = new List<Gender>();
-            string query = "SELECT GenderID, Description FROM Genders";
+            
+            string query = "SELECT * FROM Genders ORDER BY GenderID";
 
             try
             {
@@ -27,14 +30,16 @@ namespace campus_love_app.infrastructure.repositories
 
                 using var cmd = new MySqlCommand(query, _connection);
                 using var reader = cmd.ExecuteReader();
-
+                
                 while (reader.Read())
                 {
-                    genders.Add(new Gender
+                    var gender = new Gender
                     {
                         GenderID = reader.GetInt32("GenderID"),
-                        Description = reader.GetString("Description")
-                    });
+                        GenderName = reader.GetString("GenderName")
+                    };
+                    
+                    genders.Add(gender);
                 }
             }
             finally
@@ -44,6 +49,40 @@ namespace campus_love_app.infrastructure.repositories
             }
 
             return genders;
+        }
+
+        // Make sure default genders exist in the database
+        private void EnsureDefaultGendersExist()
+        {
+            string[] defaultGenders = { "Male", "Female", "Other" };
+            
+            try
+            {
+                if (_connection.State != System.Data.ConnectionState.Open)
+                    _connection.Open();
+                
+                // Check if any genders exist
+                string countQuery = "SELECT COUNT(*) FROM Genders";
+                using var countCmd = new MySqlCommand(countQuery, _connection);
+                var count = Convert.ToInt32(countCmd.ExecuteScalar());
+                
+                // If no genders exist, add the defaults
+                if (count == 0)
+                {
+                    foreach (var gender in defaultGenders)
+                    {
+                        string insertQuery = "INSERT INTO Genders (GenderName) VALUES (@GenderName)";
+                        using var insertCmd = new MySqlCommand(insertQuery, _connection);
+                        insertCmd.Parameters.AddWithValue("@GenderName", gender);
+                        insertCmd.ExecuteNonQuery();
+                    }
+                }
+            }
+            finally
+            {
+                if (_connection.State == System.Data.ConnectionState.Open)
+                    _connection.Close();
+            }
         }
     }
 } 

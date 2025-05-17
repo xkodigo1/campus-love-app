@@ -9,6 +9,6 @@ namespace campus_love_app.domain.entities
     public class SexualOrientation
     {
         public int OrientationID { get; set; }
-        public string Description { get; set;} = string.Empty;
+        public string OrientationName { get; set; } = string.Empty;
     }
 }
