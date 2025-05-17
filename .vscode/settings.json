@@ -4,6 +4,7 @@
         "ui",
         "release",
         "auth",
-        "data"
+        "data",
+        "database"
     ]
 }
