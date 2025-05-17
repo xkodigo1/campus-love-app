@@ -18,7 +18,7 @@ namespace campus_love_app.infrastructure.repositories
         public List<SexualOrientation> GetAll()
         {
             var orientations = new List<SexualOrientation>();
-            string query = "SELECT SexualOrientationID, Name FROM SexualOrientations";
+            string query = "SELECT OrientationID, Description FROM SexualOrientations";
 
             try
             {
@@ -32,8 +32,8 @@ namespace campus_love_app.infrastructure.repositories
                 {
                     orientations.Add(new SexualOrientation
                     {
-                        SexualOrientationID = reader.GetInt32("SexualOrientationID"),
-                        Name = reader.GetString("Name")
+                        OrientationID = reader.GetInt32("OrientationID"),
+                        Description = reader.GetString("Description")
                     });
                 }
             }

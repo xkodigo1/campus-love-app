@@ -8,7 +8,8 @@
     ".NETCoreApp,Version=v9.0": {
       "campus-love-app/1.0.0": {
         "dependencies": {
-          "MySql.Data": "9.3.0"
+          "MySql.Data": "9.3.0",
+          "Spectre.Console": "0.50.0"
         },
         "runtime": {
           "campus-love-app.dll": {}
@@ -111,6 +112,17 @@
           }
         }
       },
+      "Spectre.Console/0.50.0": {
+        "dependencies": {
+          "System.Memory": "4.6.3"
+        },
+        "runtime": {
+          "lib/net9.0/Spectre.Console.dll": {
+            "assemblyVersion": "0.0.0.0",
+            "fileVersion": "0.50.0.0"
+          }
+        }
+      },
       "System.Buffers/4.5.1": {},
       "System.Configuration.ConfigurationManager/8.0.0": {
         "dependencies": {
@@ -157,6 +169,7 @@
         }
       },
       "System.IO.Pipelines/6.0.3": {},
+      "System.Memory/4.6.3": {},
       "System.Reflection/4.3.0": {
         "dependencies": {
           "Microsoft.NETCore.Platforms": "1.1.0",
@@ -311,6 +324,13 @@
       "path": "mysql.data/9.3.0",
       "hashPath": "mysql.data.9.3.0.nupkg.sha512"
     },
+    "Spectre.Console/0.50.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-gkwYncFqMjlPF6Yz8KeVsKWpdfv15sr6uKm+vXVa/8Q4tvx52LPzMQOO5m+bXwI3AGGFeY3cok3ZJbguYizswg==",
+      "path": "spectre.console/0.50.0",
+      "hashPath": "spectre.console.0.50.0.nupkg.sha512"
+    },
     "System.Buffers/4.5.1": {
       "type": "package",
       "serviceable": true,
@@ -352,6 +372,13 @@
       "sha512": "sha512-ryTgF+iFkpGZY1vRQhfCzX0xTdlV3pyaTTqRu2ETbEv+HlV7O6y7hyQURnghNIXvctl5DuZ//Dpks6HdL/Txgw==",
       "path": "system.io.pipelines/6.0.3",
       "hashPath": "system.io.pipelines.6.0.3.nupkg.sha512"
+    },
+    "System.Memory/4.6.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-qdcDOgnFZY40+Q9876JUHnlHu7bosOHX8XISRoH94fwk6hgaeQGSgfZd8srWRZNt5bV9ZW2TljcegDNxsf+96A==",
+      "path": "system.memory/4.6.3",
+      "hashPath": "system.memory.4.6.3.nupkg.sha512"
     },
     "System.Reflection/4.3.0": {
       "type": "package",

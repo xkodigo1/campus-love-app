@@ -58,7 +58,6 @@ CREATE TABLE Users (
     IsVerified BOOLEAN NOT NULL DEFAULT FALSE,
     CityID INT,
     RegistrationDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    ProfilePictureUrl VARCHAR(255),
     FOREIGN KEY (GenderID) REFERENCES Genders(GenderID),
     FOREIGN KEY (CareerID) REFERENCES Careers(CareerID),
     FOREIGN KEY (OrientationID) REFERENCES SexualOrientations(OrientationID),
