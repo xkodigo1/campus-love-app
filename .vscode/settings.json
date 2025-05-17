@@ -3,6 +3,8 @@
         "interfaces",
         "ui",
         "release",
-        "auth"
+        "auth",
+        "data",
+        "database"
     ]
 }

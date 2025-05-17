@@ -107,7 +107,7 @@ CREATE TABLE Matches (
     MatchDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (User1ID) REFERENCES Users(UserID),
     FOREIGN KEY (User2ID) REFERENCES Users(UserID),
-    CONSTRAINT chk_unique_match_pair UNIQUE (LEAST(User1ID, User2ID), GREATEST(User1ID, User2ID))
+    UNIQUE KEY unique_match (User1ID, User2ID)
 );
 
 -- 6. Daily Credits Table
