@@ -59,8 +59,8 @@ namespace campus_love_app.infrastructure.repositories
             // Query to get available profiles based on sexual orientation and excluding users
             // that the current user has already interacted with (liked or disliked)
             string query = @"
-                SELECT u.*, g.Description AS GenderDesc, c.Name AS CareerName, city.Name AS CityName, 
-                       so.Description AS OrientationDesc
+                SELECT u.*, g.GenderName AS GenderDesc, c.CareerName AS CareerName, city.CityName AS CityName, 
+                       so.OrientationName AS OrientationDesc
                 FROM Users u
                 JOIN Genders g ON u.GenderID = g.GenderID
                 JOIN Careers c ON u.CareerID = c.CareerID
@@ -137,14 +137,14 @@ namespace campus_love_app.infrastructure.repositories
                     _connection.Open();
 
                 // Register the like interaction
-                string interactionQuery = "INSERT INTO Interactions (FromUserID, ToUserID, Type, InteractionDate) VALUES (@FromUserID, @ToUserID, 'LIKE', NOW())";
+                string interactionQuery = "INSERT INTO Interactions (FromUserID, ToUserID, InteractionType, InteractionDate) VALUES (@FromUserID, @ToUserID, 'LIKE', NOW())";
                 using var interactionCmd = new MySqlCommand(interactionQuery, _connection);
                 interactionCmd.Parameters.AddWithValue("@FromUserID", fromUserId);
                 interactionCmd.Parameters.AddWithValue("@ToUserID", toUserId);
                 interactionCmd.ExecuteNonQuery();
 
                 // Check if there's a match (if the other person has already liked this user)
-                string matchCheckQuery = "SELECT COUNT(*) FROM Interactions WHERE FromUserID = @ToUserID AND ToUserID = @FromUserID AND Type = 'LIKE'";
+                string matchCheckQuery = "SELECT COUNT(*) FROM Interactions WHERE FromUserID = @ToUserID AND ToUserID = @FromUserID AND InteractionType = 'LIKE'";
                 using var matchCheckCmd = new MySqlCommand(matchCheckQuery, _connection);
                 matchCheckCmd.Parameters.AddWithValue("@FromUserID", fromUserId);
                 matchCheckCmd.Parameters.AddWithValue("@ToUserID", toUserId);
