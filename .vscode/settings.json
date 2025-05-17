@@ -1,6 +1,7 @@
 {
     "conventionalCommits.scopes": [
         "interfaces",
-        "ui"
+        "ui",
+        "release"
     ]
 }
