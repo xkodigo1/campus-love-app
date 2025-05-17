@@ -35,3 +35,4 @@ C:\Users\xkodi\projectNet\campus-love-app\obj\Debug\net9.0\refint\campus-love-ap
 C:\Users\xkodi\projectNet\campus-love-app\obj\Debug\net9.0\campus-love-app.pdb
 C:\Users\xkodi\projectNet\campus-love-app\obj\Debug\net9.0\campus-love-app.genruntimeconfig.cache
 C:\Users\xkodi\projectNet\campus-love-app\obj\Debug\net9.0\ref\campus-love-app.dll
+C:\Users\xkodi\projectNet\campus-love-app\bin\Debug\net9.0\Spectre.Console.dll

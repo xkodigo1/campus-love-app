@@ -18,8 +18,8 @@ namespace campus_love_app.infrastructure.repositories
 
         public void RegisterUser(User user)
         {
-            string query = @"INSERT INTO Users (Name, Surname, BirthDate, Email, Password, GenderID, CareerID, CityID, SexualOrientationID, Bio, IsVerified) 
-                            VALUES (@Name, @Surname, @BirthDate, @Email, @Password, @GenderID, @CareerID, @CityID, @SexualOrientationID, @Bio, @IsVerified);
+            string query = @"INSERT INTO Users (FullName, Age, GenderID, CareerID, CityID, OrientationID, ProfilePhrase, MinPreferredAge, MaxPreferredAge, IsVerified) 
+                            VALUES (@FullName, @Age, @GenderID, @CareerID, @CityID, @OrientationID, @ProfilePhrase, @MinPreferredAge, @MaxPreferredAge, @IsVerified);
                             SELECT LAST_INSERT_ID();";
 
             try
@@ -28,34 +28,20 @@ namespace campus_love_app.infrastructure.repositories
                     _connection.Open();
 
                 using var cmd = new MySqlCommand(query, _connection);
-                cmd.Parameters.AddWithValue("@Name", user.Name);
-                cmd.Parameters.AddWithValue("@Surname", user.Surname);
-                cmd.Parameters.AddWithValue("@BirthDate", user.BirthDate);
-                cmd.Parameters.AddWithValue("@Email", user.Email);
-                cmd.Parameters.AddWithValue("@Password", user.Password);
+                cmd.Parameters.AddWithValue("@FullName", user.FullName);
+                cmd.Parameters.AddWithValue("@Age", user.Age);
                 cmd.Parameters.AddWithValue("@GenderID", user.GenderID);
                 cmd.Parameters.AddWithValue("@CareerID", user.CareerID);
                 cmd.Parameters.AddWithValue("@CityID", user.CityID);
-                cmd.Parameters.AddWithValue("@SexualOrientationID", user.SexualOrientationID);
-                cmd.Parameters.AddWithValue("@Bio", user.Bio);
+                cmd.Parameters.AddWithValue("@OrientationID", user.OrientationID);
+                cmd.Parameters.AddWithValue("@ProfilePhrase", user.ProfilePhrase);
+                cmd.Parameters.AddWithValue("@MinPreferredAge", user.MinPreferredAge);
+                cmd.Parameters.AddWithValue("@MaxPreferredAge", user.MaxPreferredAge);
                 cmd.Parameters.AddWithValue("@IsVerified", user.IsVerified);
 
                 // Get the inserted ID and assign it to the user
                 int userId = Convert.ToInt32(cmd.ExecuteScalar());
                 user.UserID = userId;
-                
-                // If the user has interests, save them in the UserInterests table
-                if (user.Interests != null && user.Interests.Count > 0)
-                {
-                    foreach (var interest in user.Interests)
-                    {
-                        string interestQuery = "INSERT INTO UserInterests (UserID, InterestID) VALUES (@UserID, @InterestID)";
-                        using var interestCmd = new MySqlCommand(interestQuery, _connection);
-                        interestCmd.Parameters.AddWithValue("@UserID", userId);
-                        interestCmd.Parameters.AddWithValue("@InterestID", interest.InterestID);
-                        interestCmd.ExecuteNonQuery();
-                    }
-                }
             }
             finally
             {
@@ -73,29 +59,27 @@ namespace campus_love_app.infrastructure.repositories
             // Query to get available profiles based on sexual orientation and excluding users
             // that the current user has already interacted with (liked or disliked)
             string query = @"
-                SELECT u.*, g.Name AS GenderName, c.Name AS CareerName, city.Name AS CityName, 
-                       so.Name AS SexualOrientationName, r.Name AS RegionName, country.Name AS CountryName
+                SELECT u.*, g.Description AS GenderDesc, c.Name AS CareerName, city.Name AS CityName, 
+                       so.Description AS OrientationDesc
                 FROM Users u
                 JOIN Genders g ON u.GenderID = g.GenderID
                 JOIN Careers c ON u.CareerID = c.CareerID
                 JOIN Cities city ON u.CityID = city.CityID
-                JOIN Regions r ON city.RegionID = r.RegionID
-                JOIN Countries country ON r.CountryID = country.CountryID
-                JOIN SexualOrientations so ON u.SexualOrientationID = so.SexualOrientationID
+                JOIN SexualOrientations so ON u.OrientationID = so.OrientationID
                 WHERE u.UserID <> @UserId
                 AND u.UserID NOT IN (
                     SELECT ToUserID FROM Interactions WHERE FromUserID = @UserId
                 )";
 
             // Add filtering based on sexual orientation
-            if (currentUser.SexualOrientationID == 1) // Straight
+            if (currentUser.OrientationID == 1) // Straight
             {
                 if (currentUser.GenderID == 1) // Male looking for Female
                     query += " AND u.GenderID = 2";
                 else // Female looking for Male
                     query += " AND u.GenderID = 1";
             }
-            else if (currentUser.SexualOrientationID == 2) // Gay
+            else if (currentUser.OrientationID == 2) // Gay
             {
                 if (currentUser.GenderID == 1) // Male looking for Male
                     query += " AND u.GenderID = 1";
@@ -121,17 +105,16 @@ namespace campus_love_app.infrastructure.repositories
                     var user = new User
                     {
                         UserID = reader.GetInt32("UserID"),
-                        Name = reader.GetString("Name"),
-                        Surname = reader.GetString("Surname"),
-                        BirthDate = reader.GetDateTime("BirthDate"),
-                        Email = reader.GetString("Email"),
+                        FullName = reader.GetString("FullName"),
+                        Age = reader.GetInt32("Age"),
                         GenderID = reader.GetInt32("GenderID"),
                         CareerID = reader.GetInt32("CareerID"),
                         CityID = reader.GetInt32("CityID"),
-                        SexualOrientationID = reader.GetInt32("SexualOrientationID"),
-                        Bio = reader.GetString("Bio"),
-                        IsVerified = reader.GetBoolean("IsVerified"),
-                        // You might want to add additional properties from the joined tables
+                        OrientationID = reader.GetInt32("OrientationID"),
+                        ProfilePhrase = reader.GetString("ProfilePhrase"),
+                        MinPreferredAge = reader.GetInt32("MinPreferredAge"),
+                        MaxPreferredAge = reader.GetInt32("MaxPreferredAge"),
+                        IsVerified = reader.GetBoolean("IsVerified")
                     };
                     
                     users.Add(user);
@@ -141,12 +124,6 @@ namespace campus_love_app.infrastructure.repositories
             {
                 if (_connection.State == System.Data.ConnectionState.Open)
                     _connection.Close();
-            }
-
-            // Load interests for each user
-            foreach (var user in users)
-            {
-                user.Interests = GetUserInterests(user.UserID);
             }
 
             return users;
@@ -196,13 +173,8 @@ namespace campus_love_app.infrastructure.repositories
             var matches = new List<User>();
             
             string query = @"
-                SELECT u.*, g.Name AS GenderName, c.Name AS CareerName, city.Name AS CityName, 
-                       so.Name AS SexualOrientationName
+                SELECT u.* 
                 FROM Users u
-                JOIN Genders g ON u.GenderID = g.GenderID
-                JOIN Careers c ON u.CareerID = c.CareerID
-                JOIN Cities city ON u.CityID = city.CityID
-                JOIN SexualOrientations so ON u.SexualOrientationID = so.SexualOrientationID
                 WHERE u.UserID IN (
                     SELECT User2ID FROM Matches WHERE User1ID = @UserId
                     UNION
@@ -224,15 +196,15 @@ namespace campus_love_app.infrastructure.repositories
                     var user = new User
                     {
                         UserID = reader.GetInt32("UserID"),
-                        Name = reader.GetString("Name"),
-                        Surname = reader.GetString("Surname"),
-                        BirthDate = reader.GetDateTime("BirthDate"),
-                        Email = reader.GetString("Email"),
+                        FullName = reader.GetString("FullName"),
+                        Age = reader.GetInt32("Age"),
                         GenderID = reader.GetInt32("GenderID"),
                         CareerID = reader.GetInt32("CareerID"),
                         CityID = reader.GetInt32("CityID"),
-                        SexualOrientationID = reader.GetInt32("SexualOrientationID"),
-                        Bio = reader.GetString("Bio"),
+                        OrientationID = reader.GetInt32("OrientationID"),
+                        ProfilePhrase = reader.GetString("ProfilePhrase"),
+                        MinPreferredAge = reader.GetInt32("MinPreferredAge"),
+                        MaxPreferredAge = reader.GetInt32("MaxPreferredAge"),
                         IsVerified = reader.GetBoolean("IsVerified")
                     };
                     
@@ -245,12 +217,6 @@ namespace campus_love_app.infrastructure.repositories
                     _connection.Close();
             }
 
-            // Load interests for each matched user
-            foreach (var user in matches)
-            {
-                user.Interests = GetUserInterests(user.UserID);
-            }
-
             return matches;
         }
 
@@ -259,15 +225,7 @@ namespace campus_love_app.infrastructure.repositories
         {
             User user = null;
             
-            string query = @"
-                SELECT u.*, g.Name AS GenderName, c.Name AS CareerName, city.Name AS CityName, 
-                       so.Name AS SexualOrientationName
-                FROM Users u
-                JOIN Genders g ON u.GenderID = g.GenderID
-                JOIN Careers c ON u.CareerID = c.CareerID
-                JOIN Cities city ON u.CityID = city.CityID
-                JOIN SexualOrientations so ON u.SexualOrientationID = so.SexualOrientationID
-                WHERE u.UserID = @UserId";
+            string query = @"SELECT * FROM Users WHERE UserID = @UserId";
 
             try
             {
@@ -284,15 +242,15 @@ namespace campus_love_app.infrastructure.repositories
                     user = new User
                     {
                         UserID = reader.GetInt32("UserID"),
-                        Name = reader.GetString("Name"),
-                        Surname = reader.GetString("Surname"),
-                        BirthDate = reader.GetDateTime("BirthDate"),
-                        Email = reader.GetString("Email"),
+                        FullName = reader.GetString("FullName"),
+                        Age = reader.GetInt32("Age"),
                         GenderID = reader.GetInt32("GenderID"),
                         CareerID = reader.GetInt32("CareerID"),
                         CityID = reader.GetInt32("CityID"),
-                        SexualOrientationID = reader.GetInt32("SexualOrientationID"),
-                        Bio = reader.GetString("Bio"),
+                        OrientationID = reader.GetInt32("OrientationID"),
+                        ProfilePhrase = reader.GetString("ProfilePhrase"),
+                        MinPreferredAge = reader.GetInt32("MinPreferredAge"),
+                        MaxPreferredAge = reader.GetInt32("MaxPreferredAge"),
                         IsVerified = reader.GetBoolean("IsVerified")
                     };
                 }
@@ -303,51 +261,7 @@ namespace campus_love_app.infrastructure.repositories
                     _connection.Close();
             }
 
-            if (user != null)
-            {
-                user.Interests = GetUserInterests(userId);
-            }
-
             return user;
-        }
-
-        // Helper method to get user interests
-        private List<Interest> GetUserInterests(int userId)
-        {
-            var interests = new List<Interest>();
-            
-            string query = @"
-                SELECT i.* 
-                FROM Interests i
-                JOIN UserInterests ui ON i.InterestID = ui.InterestID
-                WHERE ui.UserID = @UserId";
-
-            try
-            {
-                if (_connection.State != System.Data.ConnectionState.Open)
-                    _connection.Open();
-
-                using var cmd = new MySqlCommand(query, _connection);
-                cmd.Parameters.AddWithValue("@UserId", userId);
-                
-                using var reader = cmd.ExecuteReader();
-                
-                while (reader.Read())
-                {
-                    interests.Add(new Interest
-                    {
-                        InterestID = reader.GetInt32("InterestID"),
-                        Name = reader.GetString("Name")
-                    });
-                }
-            }
-            finally
-            {
-                if (_connection.State == System.Data.ConnectionState.Open)
-                    _connection.Close();
-            }
-
-            return interests;
         }
     }
 } 

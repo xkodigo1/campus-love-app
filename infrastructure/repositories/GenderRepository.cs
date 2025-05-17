@@ -18,7 +18,7 @@ namespace campus_love_app.infrastructure.repositories
         public List<Gender> GetAll()
         {
             var genders = new List<Gender>();
-            string query = "SELECT GenderID, Name FROM Genders";
+            string query = "SELECT GenderID, Description FROM Genders";
 
             try
             {
@@ -33,7 +33,7 @@ namespace campus_love_app.infrastructure.repositories
                     genders.Add(new Gender
                     {
                         GenderID = reader.GetInt32("GenderID"),
-                        Name = reader.GetString("Name")
+                        Description = reader.GetString("Description")
                     });
                 }
             }
