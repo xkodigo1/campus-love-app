@@ -25,6 +25,16 @@ namespace campus_love_app.application.ui
             _currentAccount = account;
         }
 
+        public bool IsUserLoggedIn()
+        {
+            return _currentUser != null;
+        }
+        
+        public User? GetCurrentUser()
+        {
+            return _currentUser;
+        }
+
         public void ShowWelcome()
         {
             Console.Clear();

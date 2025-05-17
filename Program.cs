@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using campus_love_app.application.ui;
 using campus_love_app.domain.entities;
 using campus_love_app.infrastructure.mysql;
+using campus_love_app.infrastructure.repositories;
+using campus_love_app.application.services;
+using campus_love_app.domain.ports;
 using Spectre.Console;
 
 namespace campus_love_app
@@ -19,32 +22,20 @@ namespace campus_love_app
                 return; // Exit if connection fails
             }
 
+            // Initialize repositories
+            IUserRepository userRepository = new UserRepository();
+            IUserAccountRepository accountRepository = new UserAccountRepository();
+            
+            // Initialize services
+            var loginService = new LoginService(userRepository, accountRepository);
+
             // Initialize the UI
             var ui = new ConsoleUI();
 
             // Show the welcome screen
             ui.ShowWelcome();
 
-            // Demo: Sample user
-            var demoUser = new User
-            {
-                UserID = 1,
-                FullName = "John Smith",
-                Age = 22,
-                GenderID = 1,
-                OrientationID = 1,
-                CareerID = 1,
-                ProfilePhrase = "I love programming and video games",
-                IsVerified = true,
-                CityID = 1,
-                MinPreferredAge = 18,
-                MaxPreferredAge = 28
-            };
-
-            // Set the current user for UI
-            ui.SetCurrentUser(demoUser);
-
-            // Main application loop (DEMO)
+            // Main application loop
             bool exit = false;
             while (!exit)
             {
@@ -52,67 +43,141 @@ namespace campus_love_app
                 {
                     int option = ui.ShowMainMenu();
 
-                    switch (option)
+                    if (!ui.IsUserLoggedIn())
                     {
-                        case 1: // Register
-                            ui.ShowSuccess("Registration feature not implemented in this demo!");
-                            break;
+                        // User is not logged in
+                        switch (option)
+                        {
+                            case 1: // Login
+                                HandleLogin(ui, loginService);
+                                break;
 
-                        case 2: // View profiles
-                            // Demo: Simulate profile to view
-                            var demoProfile = new User
-                            {
-                                UserID = 2,
-                                FullName = "Anna Garcia",
-                                Age = 21,
-                                GenderID = 2,
-                                OrientationID = 1,
-                                CareerID = 2,
-                                ProfilePhrase = "I like art, music and nature",
-                                IsVerified = false
-                            };
-                            ui.ShowUserProfile(demoProfile);
-                            break;
+                            case 2: // Register
+                                HandleRegistration(ui, loginService);
+                                break;
 
-                        case 3: // View matches
-                            // Demo: Create list of matches
-                            var demoMatches = new List<User>
-                            {
-                                new User { UserID = 3, FullName = "Maria Lopez", Age = 20 },
-                                new User { UserID = 4, FullName = "Carlos Ruiz", Age = 23 },
-                                new User { UserID = 5, FullName = "Sofia Torres", Age = 19 }
-                            };
-                            ui.ShowMatches(demoMatches);
-                            break;
+                            case 3: // Exit
+                                exit = true;
+                                ui.ShowGoodbye();
+                                break;
 
-                        case 4: // Statistics
-                            // Demo: Example statistics
-                            var stats = new Dictionary<string, string>
-                            {
-                                { "Total users", "256" },
-                                { "Matches made", "78" },
-                                { "Most liked user", "John Smith (32 likes)" },
-                                { "Most popular interest", "Music (45%)" },
-                                { "Most common career", "Computer Science (23%)" },
-                                { "Match ratio", "18%" }
-                            };
-                            ui.ShowStatistics(stats);
-                            break;
+                            default:
+                                ui.ShowError("Invalid option. Please try again.");
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        // User is logged in
+                        switch (option)
+                        {
+                            case 1: // View profiles
+                                User? currentUser = ui.GetCurrentUser();
+                                if (currentUser != null)
+                                {
+                                    var availableProfiles = userRepository.GetAvailableProfiles(currentUser.UserID);
+                                    if (availableProfiles.Count > 0)
+                                    {
+                                        ui.ShowUserProfile(availableProfiles[0]);
+                                    }
+                                    else
+                                    {
+                                        ui.ShowError("No available profiles found.");
+                                    }
+                                }
+                                break;
 
-                        case 5: // Exit
-                            exit = true;
-                            ui.ShowGoodbye();
-                            break;
+                            case 2: // View matches
+                                currentUser = ui.GetCurrentUser();
+                                if (currentUser != null)
+                                {
+                                    var matches = userRepository.GetMatches(currentUser.UserID);
+                                    ui.ShowMatches(matches);
+                                }
+                                break;
 
-                        default:
-                            ui.ShowError("Invalid option. Please try again.");
-                            break;
+                            case 3: // Statistics
+                                // Example statistics - in a real app, these would come from a service
+                                var stats = new Dictionary<string, string>
+                                {
+                                    { "Total users", "256" },
+                                    { "Matches made", "78" },
+                                    { "Most liked user", "John Smith (32 likes)" },
+                                    { "Most popular interest", "Music (45%)" },
+                                    { "Most common career", "Computer Science (23%)" },
+                                    { "Match ratio", "18%" }
+                                };
+                                ui.ShowStatistics(stats);
+                                break;
+                                
+                            case 4: // Logout
+                                ui.ShowLogout();
+                                break;
+
+                            case 5: // Exit
+                                exit = true;
+                                ui.ShowGoodbye();
+                                break;
+
+                            default:
+                                ui.ShowError("Invalid option. Please try again.");
+                                break;
+                        }
                     }
                 }
                 catch (Exception ex)
                 {
                     ShowError($"An unexpected error occurred: {ex.Message}", ex);
                 }
+            }
+        }
+
+        private static void HandleLogin(ConsoleUI ui, LoginService loginService)
+        {
+            try
+            {
+                var (usernameOrEmail, password) = ui.ShowLoginScreen();
+                var (user, account) = loginService.Login(usernameOrEmail, password);
+                
+                if (user != null && account != null)
+                {
+                    ui.SetCurrentUser(user);
+                    ui.SetCurrentAccount(account);
+                    ui.ShowSuccess($"Welcome back, {user.FullName}!");
+                }
+                else
+                {
+                    ui.ShowError("Invalid username/email or password. Please try again.");
+                }
+            }
+            catch (Exception ex)
+            {
+                ui.ShowError($"Login failed: {ex.Message}");
+            }
+        }
+
+        private static void HandleRegistration(ConsoleUI ui, LoginService loginService)
+        {
+            try
+            {
+                // Step 1: Collect basic user information and account details
+                var (email, username, password, baseUser) = ui.ShowRegistrationScreen();
+                
+                // Step 2: Collect profile details
+                var fullUser = ui.ShowUserProfileCreationScreen(baseUser);
+                
+                // Step 3: Register the user in the system
+                var (user, account) = loginService.Register(email, username, password, fullUser);
+                
+                // Step 4: Log the user in
+                ui.SetCurrentUser(user);
+                ui.SetCurrentAccount(account);
+                
+                ui.ShowSuccess("Registration successful! Welcome to Campus Love!");
+            }
+            catch (Exception ex)
+            {
+                ui.ShowError($"Registration failed: {ex.Message}");
             }
         }
 
