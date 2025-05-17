@@ -577,7 +577,7 @@ namespace campus_love_app.application.ui
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title("[yellow]What would you like to do?[/]")
-                    .PageSize(Math.Min(10, matches.Count + 1))
+                    .PageSize(Math.Max(3, Math.Min(10, matches.Count + 1)))
                     .HighlightStyle(new Style(foreground: Color.Yellow))
                     .AddChoices(options));
             

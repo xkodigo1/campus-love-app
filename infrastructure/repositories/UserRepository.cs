@@ -142,6 +142,8 @@ namespace campus_love_app.infrastructure.repositories
                 interactionCmd.Parameters.AddWithValue("@FromUserID", fromUserId);
                 interactionCmd.Parameters.AddWithValue("@ToUserID", toUserId);
                 interactionCmd.ExecuteNonQuery();
+                
+                Console.WriteLine($"DEBUG: Added like interaction from {fromUserId} to {toUserId}");
 
                 // Check if there's a match (if the other person has already liked this user)
                 string matchCheckQuery = "SELECT COUNT(*) FROM Interactions WHERE FromUserID = @ToUserID AND ToUserID = @FromUserID AND InteractionType = 'LIKE'";
@@ -150,15 +152,41 @@ namespace campus_love_app.infrastructure.repositories
                 matchCheckCmd.Parameters.AddWithValue("@ToUserID", toUserId);
                 
                 int hasMatch = Convert.ToInt32(matchCheckCmd.ExecuteScalar());
+                Console.WriteLine($"DEBUG: Match check result: {hasMatch}");
                 
                 if (hasMatch > 0)
                 {
+                    // First check if this match already exists to avoid duplicates
+                    string checkExistingMatch = @"
+                        SELECT COUNT(*) FROM Matches 
+                        WHERE (User1ID = @User1ID AND User2ID = @User2ID) 
+                           OR (User1ID = @User2ID AND User2ID = @User1ID)";
+                    using var checkExistingCmd = new MySqlCommand(checkExistingMatch, _connection);
+                    checkExistingCmd.Parameters.AddWithValue("@User1ID", fromUserId);
+                    checkExistingCmd.Parameters.AddWithValue("@User2ID", toUserId);
+                    
+                    int existingMatches = Convert.ToInt32(checkExistingCmd.ExecuteScalar());
+                    if (existingMatches > 0)
+                    {
+                        Console.WriteLine($"DEBUG: Match between {fromUserId} and {toUserId} already exists");
+                        return; // Match already exists, no need to create it again
+                    }
+                    
                     // It's a match! Create entry in Matches table
                     string createMatchQuery = "INSERT INTO Matches (User1ID, User2ID, MatchDate) VALUES (@User1ID, @User2ID, NOW())";
                     using var createMatchCmd = new MySqlCommand(createMatchQuery, _connection);
                     createMatchCmd.Parameters.AddWithValue("@User1ID", fromUserId);
                     createMatchCmd.Parameters.AddWithValue("@User2ID", toUserId);
-                    createMatchCmd.ExecuteNonQuery();
+                    
+                    try
+                    {
+                        createMatchCmd.ExecuteNonQuery();
+                        Console.WriteLine($"DEBUG: Created new match between {fromUserId} and {toUserId}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"DEBUG ERROR: Failed to create match: {ex.Message}");
+                    }
                 }
             }
             finally
@@ -180,6 +208,33 @@ namespace campus_love_app.infrastructure.repositories
                     UNION
                     SELECT User1ID FROM Matches WHERE User2ID = @UserId
                 )";
+                
+            Console.WriteLine($"DEBUG: Getting matches for user {userId}");
+
+            // Add direct count check for debugging
+            try
+            {
+                if (_connection.State != System.Data.ConnectionState.Open)
+                    _connection.Open();
+                    
+                string countQuery = @"
+                    SELECT COUNT(*) 
+                    FROM Matches 
+                    WHERE User1ID = @UserId OR User2ID = @UserId";
+                    
+                using var countCmd = new MySqlCommand(countQuery, _connection);
+                countCmd.Parameters.AddWithValue("@UserId", userId);
+                int matchCount = Convert.ToInt32(countCmd.ExecuteScalar());
+                Console.WriteLine($"DEBUG: Direct database check shows {matchCount} matches for user {userId}");
+                
+                // Now continue with the original query
+                _connection.Close();
+                _connection.Open();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DEBUG ERROR in count check: {ex.Message}");
+            }
 
             try
             {
@@ -209,7 +264,14 @@ namespace campus_love_app.infrastructure.repositories
                     };
                     
                     matches.Add(user);
+                    Console.WriteLine($"DEBUG: Found match with user {user.UserID} ({user.FullName})");
                 }
+                
+                Console.WriteLine($"DEBUG: Found {matches.Count} matches for user {userId}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DEBUG ERROR in GetMatches: {ex.Message}");
             }
             finally
             {
@@ -262,6 +324,77 @@ namespace campus_love_app.infrastructure.repositories
             }
 
             return user;
+        }
+        
+        // Debug method to check if matches exist in the database
+        public List<(int User1ID, int User2ID)> GetAllMatchesDebug()
+        {
+            var matchesList = new List<(int User1ID, int User2ID)>();
+            
+            string query = "SELECT User1ID, User2ID FROM Matches";
+            
+            try
+            {
+                if (_connection.State != System.Data.ConnectionState.Open)
+                    _connection.Open();
+                
+                using var cmd = new MySqlCommand(query, _connection);
+                using var reader = cmd.ExecuteReader();
+                
+                while (reader.Read())
+                {
+                    int user1Id = reader.GetInt32("User1ID");
+                    int user2Id = reader.GetInt32("User2ID");
+                    matchesList.Add((user1Id, user2Id));
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error checking matches: {ex.Message}");
+            }
+            finally
+            {
+                if (_connection.State == System.Data.ConnectionState.Open)
+                    _connection.Close();
+            }
+            
+            return matchesList;
+        }
+        
+        // Debug method to check interactions
+        public List<(int FromUserID, int ToUserID, string Type)> GetAllInteractionsDebug()
+        {
+            var interactionsList = new List<(int FromUserID, int ToUserID, string Type)>();
+            
+            string query = "SELECT FromUserID, ToUserID, InteractionType FROM Interactions";
+            
+            try
+            {
+                if (_connection.State != System.Data.ConnectionState.Open)
+                    _connection.Open();
+                
+                using var cmd = new MySqlCommand(query, _connection);
+                using var reader = cmd.ExecuteReader();
+                
+                while (reader.Read())
+                {
+                    int fromUserId = reader.GetInt32("FromUserID");
+                    int toUserId = reader.GetInt32("ToUserID");
+                    string type = reader.GetString("InteractionType");
+                    interactionsList.Add((fromUserId, toUserId, type));
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error checking interactions: {ex.Message}");
+            }
+            finally
+            {
+                if (_connection.State == System.Data.ConnectionState.Open)
+                    _connection.Close();
+            }
+            
+            return interactionsList;
         }
     }
 } 

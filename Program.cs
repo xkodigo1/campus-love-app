@@ -23,7 +23,7 @@ namespace campus_love_app
             }
 
             // Initialize repositories
-            IUserRepository userRepository = new UserRepository();
+            UserRepository userRepository = new UserRepository();
             IUserAccountRepository accountRepository = new UserAccountRepository();
             ILocationRepository locationRepository = new LocationRepository();
             ICareerRepository careerRepository = new CareerRepository();
