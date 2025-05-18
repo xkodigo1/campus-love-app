@@ -17,6 +17,7 @@ namespace campus_love_app.application.ui
         private readonly ICareerRepository? _careerRepository;
         private readonly IGenderRepository? _genderRepository;
         private readonly ISexualOrientationRepository? _orientationRepository;
+        private readonly IUserRepository? _userRepository;
 
         public ConsoleUI() { }
 
@@ -27,6 +28,13 @@ namespace campus_love_app.application.ui
             _careerRepository = careerRepository;
             _genderRepository = genderRepository;
             _orientationRepository = orientationRepository;
+        }
+
+        public ConsoleUI(ILocationRepository locationRepository, ICareerRepository careerRepository,
+                        IGenderRepository genderRepository, ISexualOrientationRepository orientationRepository,
+                        IUserRepository userRepository) : this(locationRepository, careerRepository, genderRepository, orientationRepository)
+        {
+            _userRepository = userRepository;
         }
 
         public void SetCurrentUser(User user)
@@ -548,9 +556,18 @@ namespace campus_love_app.application.ui
                 // Handle the selected option
                 if (option == "💖 Like")
                 {
-                    // Here you would handle the like action
-                    // For demo, just show a success message
-                    AnsiConsole.MarkupLine("[green]You liked this profile![/]");
+                    // Register the like in the database if repository is available
+                    if (_userRepository != null && _currentUser != null)
+                    {
+                        _userRepository.LikeUser(_currentUser.UserID, user.UserID);
+                        AnsiConsole.MarkupLine("[green]You liked this profile![/]");
+                    }
+                    else
+                    {
+                        // Demo mode or error
+                        AnsiConsole.MarkupLine("[green]You liked this profile![/] [grey](Demo mode - like not saved)[/]");
+                    }
+                    
                     PressAnyKey();
                     
                     // Continue showing other profiles if available
@@ -561,8 +578,18 @@ namespace campus_love_app.application.ui
                 }
                 else if (option == "👎 Dislike")
                 {
-                    // Handle dislike
-                    AnsiConsole.MarkupLine("[grey]Profile skipped.[/]");
+                    // Register the dislike interaction if repository is available
+                    if (_userRepository != null && _currentUser != null)
+                    {
+                        // We'd need to add a DislikeUser method to the repository
+                        // For now we'll just show a message
+                        AnsiConsole.MarkupLine("[grey]Profile skipped.[/]");
+                    }
+                    else
+                    {
+                        AnsiConsole.MarkupLine("[grey]Profile skipped.[/]");
+                    }
+                    
                     PressAnyKey();
                     
                     // Continue showing other profiles if available
