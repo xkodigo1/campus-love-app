@@ -82,7 +82,7 @@ namespace campus_love_app
                                     var availableProfiles = userRepository.GetAvailableProfiles(currentUser.UserID);
                                     if (availableProfiles.Count > 0)
                                     {
-                                        ui.ShowUserProfile(availableProfiles[0]);
+                                        ui.ShowUserProfile(availableProfiles[0], false, availableProfiles, 0);
                                     }
                                     else
                                     {

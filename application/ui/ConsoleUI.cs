@@ -493,7 +493,7 @@ namespace campus_love_app.application.ui
             return selection;
         }
 
-        public void ShowUserProfile(User user, bool isMatchScreen = false)
+        public void ShowUserProfile(User user, bool isMatchScreen = false, List<User> allProfiles = null, int currentIndex = 0)
         {
             Console.Clear();
             DrawHeader(isMatchScreen ? "Match" : "Profile");
@@ -502,7 +502,14 @@ namespace campus_love_app.application.ui
             var profileText = $"[bold]{user.FullName}, {user.Age}[/]";
             var phraseText = $"[grey]Phrase:[/] [italic]{user.ProfilePhrase}[/]";
             
-            var profileContent = new Panel(profileText + "\n" + phraseText)
+            // Show profile navigation info if we have multiple profiles
+            string navigationInfo = "";
+            if (!isMatchScreen && allProfiles != null && allProfiles.Count > 1)
+            {
+                navigationInfo = $"\n[grey]Profile {currentIndex + 1} of {allProfiles.Count}[/]";
+            }
+            
+            var profileContent = new Panel(profileText + "\n" + phraseText + navigationInfo)
                 .Border(BoxBorder.Rounded)
                 .BorderColor(isMatchScreen ? Color.Yellow : Color.HotPink)
                 .Padding(2, 1)
@@ -513,19 +520,68 @@ namespace campus_love_app.application.ui
             AnsiConsole.WriteLine();
             if (!isMatchScreen)
             {
+                // Prepare options based on navigation availability
+                var options = new List<string>();
+                options.Add("💖 Like");
+                options.Add("👎 Dislike");
+                
+                // Add navigation options if we have multiple profiles
+                if (allProfiles != null && allProfiles.Count > 1)
+                {
+                    if (currentIndex > 0)
+                        options.Add("⬅️ Previous profile");
+                    
+                    if (currentIndex < allProfiles.Count - 1)
+                        options.Add("➡️ Next profile");
+                }
+                
+                options.Add("↩️ Back to menu");
+                
                 // If we're on the profiles screen, show like/dislike options
                 var option = AnsiConsole.Prompt(
                     new SelectionPrompt<string>()
                         .Title("[magenta]What would you like to do?[/]")
-                        .PageSize(3)
+                        .PageSize(Math.Max(3, Math.Min(10, options.Count)))
                         .HighlightStyle(new Style(foreground: Color.HotPink))
-                        .AddChoices(new[] {
-                            "💖 Like",
-                            "👎 Dislike",
-                            "⬅️ Back to menu"
-                        }));
+                        .AddChoices(options));
                 
-                // Here you could return the selected action
+                // Handle the selected option
+                if (option == "💖 Like")
+                {
+                    // Here you would handle the like action
+                    // For demo, just show a success message
+                    AnsiConsole.MarkupLine("[green]You liked this profile![/]");
+                    PressAnyKey();
+                    
+                    // Continue showing other profiles if available
+                    if (allProfiles != null && currentIndex < allProfiles.Count - 1)
+                    {
+                        ShowUserProfile(allProfiles[currentIndex + 1], false, allProfiles, currentIndex + 1);
+                    }
+                }
+                else if (option == "👎 Dislike")
+                {
+                    // Handle dislike
+                    AnsiConsole.MarkupLine("[grey]Profile skipped.[/]");
+                    PressAnyKey();
+                    
+                    // Continue showing other profiles if available
+                    if (allProfiles != null && currentIndex < allProfiles.Count - 1)
+                    {
+                        ShowUserProfile(allProfiles[currentIndex + 1], false, allProfiles, currentIndex + 1);
+                    }
+                }
+                else if (option == "⬅️ Previous profile" && currentIndex > 0)
+                {
+                    // Show previous profile
+                    ShowUserProfile(allProfiles[currentIndex - 1], false, allProfiles, currentIndex - 1);
+                }
+                else if (option == "➡️ Next profile" && currentIndex < allProfiles.Count - 1)
+                {
+                    // Show next profile
+                    ShowUserProfile(allProfiles[currentIndex + 1], false, allProfiles, currentIndex + 1);
+                }
+                // No need for else (Back to menu) as we'll just return
             }
             else
             {
