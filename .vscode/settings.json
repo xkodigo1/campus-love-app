@@ -8,8 +8,6 @@
         "database",
         "stats",
         "json",
-        "messaging",
-        "repository",
-        "credits"
+        "messaging"
     ]
 }

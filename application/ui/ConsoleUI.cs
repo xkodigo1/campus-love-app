@@ -98,13 +98,6 @@ namespace campus_love_app.application.ui
             if (_currentUser != null)
             {
                 ShowUserProfileSummary(_currentUser);
-                
-                // Show credits information if repository is available
-                if (_userRepository != null)
-                {
-                    int creditsRemaining = _userRepository.GetRemainingCredits(_currentUser.UserID);
-                    ShowCreditsInfo(creditsRemaining);
-                }
             }
 
             var choices = new List<string>();
@@ -514,14 +507,6 @@ namespace campus_love_app.application.ui
             Console.Clear();
             DrawHeader(isMatchScreen ? "Match" : "Profile");
             
-            // Display credits if we're in the profile browsing mode and not in match screen
-            int creditsRemaining = 0;
-            if (!isMatchScreen && _currentUser != null && _userRepository != null)
-            {
-                creditsRemaining = _userRepository.GetRemainingCredits(_currentUser.UserID);
-                ShowCreditsInfo(creditsRemaining);
-            }
-
             // Create a profile panel
             var profileText = $"[bold]{user.FullName}, {user.Age}[/]";
             var phraseText = $"[grey]Phrase:[/] [italic]{user.ProfilePhrase}[/]";
@@ -546,20 +531,7 @@ namespace campus_love_app.application.ui
             {
                 // Prepare options based on navigation availability
                 var options = new List<string>();
-                
-                // Add Like option only if user has credits
-                if (creditsRemaining > 0)
-                {
-                    options.Add("💖 Like");
-                }
-                else
-                {
-                    // Show message that user is out of credits
-                    AnsiConsole.MarkupLine("[bold red]You have no credits left to give likes today![/]");
-                    AnsiConsole.MarkupLine("[grey]Credits reset daily. Come back tomorrow for more likes![/]");
-                    AnsiConsole.WriteLine();
-                }
-                
+                options.Add("💖 Like");
                 options.Add("👎 Dislike");
                 
                 // Add navigation options if we have multiple profiles
@@ -585,39 +557,24 @@ namespace campus_love_app.application.ui
                 // Handle the selected option
                 if (option == "💖 Like")
                 {
-                    try
+                    // Register the like in the database if repository is available
+                    if (_userRepository != null && _currentUser != null)
                     {
-                        // Register the like in the database if repository is available
-                        if (_userRepository != null && _currentUser != null)
-                        {
-                            _userRepository.LikeUser(_currentUser.UserID, user.UserID);
-                            AnsiConsole.MarkupLine("[green]You liked this profile![/]");
-                            
-                            // Show updated credits
-                            int updatedCredits = _userRepository.GetRemainingCredits(_currentUser.UserID);
-                            AnsiConsole.MarkupLine($"[grey]Credits remaining: [green]{updatedCredits}[/][/]");
-                        }
-                        else
-                        {
-                            // Demo mode or error
-                            AnsiConsole.MarkupLine("[green]You liked this profile![/] [grey](Demo mode - like not saved)[/]");
-                        }
-                        
-                        PressAnyKey();
-                        
-                        // Continue showing other profiles if available
-                        if (allProfiles != null && currentIndex < allProfiles.Count - 1)
-                        {
-                            ShowUserProfile(allProfiles[currentIndex + 1], false, allProfiles, currentIndex + 1);
-                        }
+                        _userRepository.LikeUser(_currentUser.UserID, user.UserID);
+                        AnsiConsole.MarkupLine("[green]You liked this profile![/]");
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        // Show error message (likely no credits left)
-                        ShowError(ex.Message);
-                        
-                        // Refresh the current profile
-                        ShowUserProfile(user, isMatchScreen, allProfiles, currentIndex);
+                        // Demo mode or error
+                        AnsiConsole.MarkupLine("[green]You liked this profile![/] [grey](Demo mode - like not saved)[/]");
+                    }
+                    
+                    PressAnyKey();
+                    
+                    // Continue showing other profiles if available
+                    if (allProfiles != null && currentIndex < allProfiles.Count - 1)
+                    {
+                        ShowUserProfile(allProfiles[currentIndex + 1], false, allProfiles, currentIndex + 1);
                     }
                 }
                 else if (option == "👎 Dislike")
@@ -635,7 +592,7 @@ namespace campus_love_app.application.ui
                     }
                     
                     PressAnyKey();
-                
+                    
                     // Continue showing other profiles if available
                     if (allProfiles != null && currentIndex < allProfiles.Count - 1)
                     {
@@ -1081,19 +1038,6 @@ namespace campus_love_app.application.ui
         {
             AnsiConsole.MarkupLine("[grey]Press any key to continue...[/]");
             Console.ReadKey(true);
-        }
-
-        // Helper method to display credit information
-        private void ShowCreditsInfo(int creditsRemaining)
-        {
-            var creditText = $"[bold]Credits remaining:[/] [green]{creditsRemaining}[/] likes";
-            var panel = new Panel(creditText)
-                .Border(BoxBorder.Rounded)
-                .BorderColor(Color.Green)
-                .Padding(1, 1);
-            
-            AnsiConsole.Write(panel);
-            AnsiConsole.WriteLine();
         }
     }
 } 

@@ -51,7 +51,7 @@ namespace campus_love_app.application.services
                 throw new ArgumentException("Email already exists");
             }
             
-            // Register the user in the repository
+            // Register the user in the repository - usando CreateUser en lugar de RegisterUser
             User? createdUser = _userRepository.CreateUser(userInfo);
             
             if (createdUser == null || createdUser.UserID <= 0)
