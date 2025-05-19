@@ -120,3 +120,74 @@ CREATE TABLE DailyCredits (
     CONSTRAINT uc_user_date UNIQUE (UserID, CreditDate)
 );
 
+-- 7. Chat System Tables
+CREATE TABLE Conversations (
+    ConversationID INT PRIMARY KEY AUTO_INCREMENT,
+    User1ID INT NOT NULL,
+    User2ID INT NOT NULL,
+    StartDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    LastMessageDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (User1ID) REFERENCES Users(UserID),
+    FOREIGN KEY (User2ID) REFERENCES Users(UserID),
+    CONSTRAINT chk_different_users CHECK (User1ID <> User2ID),
+    CONSTRAINT uc_users_conversation UNIQUE (User1ID, User2ID)
+);
+
+CREATE TABLE Messages (
+    MessageID INT PRIMARY KEY AUTO_INCREMENT,
+    ConversationID INT NOT NULL,
+    SenderID INT NOT NULL,
+    MessageText TEXT NOT NULL,
+    SentDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    IsRead BOOLEAN NOT NULL DEFAULT FALSE,
+    FOREIGN KEY (ConversationID) REFERENCES Conversations(ConversationID),
+    FOREIGN KEY (SenderID) REFERENCES Users(UserID)
+);
+
+-- Trigger to validate that sender is part of the conversation
+DELIMITER //
+CREATE TRIGGER before_message_insert
+BEFORE INSERT ON Messages
+FOR EACH ROW
+BEGIN
+    DECLARE sender_in_conversation INT;
+    
+    SELECT COUNT(*) INTO sender_in_conversation
+    FROM Conversations 
+    WHERE ConversationID = NEW.ConversationID 
+    AND (User1ID = NEW.SenderID OR User2ID = NEW.SenderID);
+    
+    IF sender_in_conversation = 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Sender must be part of the conversation';
+    END IF;
+END //
+DELIMITER ;
+
+-- Index for faster message retrieval
+CREATE INDEX idx_conversation_messages ON Messages(ConversationID, SentDate);
+
+-- Index for unread message count queries
+CREATE INDEX idx_unread_messages ON Messages(ConversationID, SenderID, IsRead);
+
+-- Table for User Credits
+CREATE TABLE IF NOT EXISTS user_credits (
+    user_id INT PRIMARY KEY,
+    credits_remaining INT NOT NULL DEFAULT 10,
+    last_reset_date DATE NOT NULL DEFAULT (CURDATE()),
+    FOREIGN KEY (user_id) REFERENCES Users(UserID)
+);
+
+-- Trigger to reset credits daily (this would typically be handled by a scheduled job)
+DELIMITER //
+CREATE TRIGGER IF NOT EXISTS reset_user_credits
+BEFORE UPDATE ON user_credits
+FOR EACH ROW
+BEGIN
+    IF DATE(OLD.last_reset_date) < DATE(CURDATE()) THEN
+        SET NEW.credits_remaining = 10;
+        SET NEW.last_reset_date = CURDATE();
+    END IF;
+END//
+DELIMITER ; 
+
