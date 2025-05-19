@@ -14,5 +14,11 @@ namespace campus_love_app.domain.ports
         void ChangePassword(int accountId, string newPassword);
         bool UsernameExists(string username);
         bool EmailExists(string email);
+        
+        // Renamed method alias for RegisterAccount
+        void RegisterUserAccount(UserAccount account);
+        
+        // New method that combines getting account and validating credentials
+        UserAccount? Authenticate(string usernameOrEmail, string password);
     }
 } 

@@ -218,5 +218,70 @@ namespace campus_love_app.infrastructure.repositories
                     _connection.Close();
             }
         }
+
+        // Renamed method alias for RegisterAccount
+        public void RegisterUserAccount(UserAccount account)
+        {
+            // Assuming PasswordHash field in account is already properly hashed
+            string query = @"INSERT INTO UserAccounts (UserID, Email, Username, PasswordHash, IsActive, LastLoginDate) 
+                            VALUES (@UserID, @Email, @Username, @PasswordHash, @IsActive, @LastLoginDate);
+                            SELECT LAST_INSERT_ID();";
+
+            try
+            {
+                if (_connection.State != System.Data.ConnectionState.Open)
+                    _connection.Open();
+
+                using var cmd = new MySqlCommand(query, _connection);
+                cmd.Parameters.AddWithValue("@UserID", account.UserID);
+                cmd.Parameters.AddWithValue("@Email", account.Email);
+                cmd.Parameters.AddWithValue("@Username", account.Username);
+                cmd.Parameters.AddWithValue("@PasswordHash", account.PasswordHash);
+                cmd.Parameters.AddWithValue("@IsActive", account.IsActive);
+                cmd.Parameters.AddWithValue("@LastLoginDate", account.LastLoginDate);
+
+                // Get the inserted ID and assign it to the account
+                int accountId = Convert.ToInt32(cmd.ExecuteScalar());
+                account.AccountID = accountId;
+            }
+            finally
+            {
+                if (_connection.State == System.Data.ConnectionState.Open)
+                    _connection.Close();
+            }
+        }
+        
+        // New method that combines getting account and validating credentials
+        public UserAccount? Authenticate(string usernameOrEmail, string password)
+        {
+            // First get the account
+            UserAccount? account = null;
+            if (usernameOrEmail.Contains("@"))
+            {
+                account = GetAccountByEmail(usernameOrEmail);
+            }
+            else
+            {
+                account = GetAccountByUsername(usernameOrEmail);
+            }
+            
+            // If no account found, authentication fails
+            if (account == null)
+            {
+                return null;
+            }
+            
+            // Verify password
+            string hashedPassword = HashPassword(password);
+            if (account.PasswordHash != hashedPassword)
+            {
+                return null;
+            }
+            
+            // Update last login date
+            UpdateLastLoginDate(account.AccountID);
+            
+            return account;
+        }
     }
 } 
