@@ -5,6 +5,8 @@
         "release",
         "auth",
         "data",
-        "database"
+        "database",
+        "stats",
+        "json"
     ]
 }
