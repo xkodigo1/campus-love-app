@@ -133,6 +133,23 @@ namespace campus_love_app.infrastructure.repositories
         {
             try
             {
+                // First check if the user has credits available
+                ResetCreditsIfNeeded(fromUserId);
+                int creditsRemaining = GetRemainingCredits(fromUserId);
+                
+                if (creditsRemaining <= 0)
+                {
+                    // User has no credits left
+                    Console.WriteLine($"DEBUG: User {fromUserId} has no credits left to give likes");
+                    throw new Exception("No credits remaining to give likes today");
+                }
+                
+                // Use one credit
+                if (!UseCredit(fromUserId))
+                {
+                    throw new Exception("Failed to use credit");
+                }
+
                 if (_connection.State != System.Data.ConnectionState.Open)
                     _connection.Open();
 
@@ -740,6 +757,234 @@ namespace campus_love_app.infrastructure.repositories
             allStats["Comparisons"] = GetUserComparativeStatistics(userId);
             
             return allStats;
+        }
+
+        // Credit management methods
+        public int GetRemainingCredits(int userId)
+        {
+            ResetCreditsIfNeeded(userId);
+            
+            string query = @"
+                SELECT credits_remaining 
+                FROM user_credits 
+                WHERE user_id = @UserId";
+
+            try
+            {
+                if (_connection.State != System.Data.ConnectionState.Open)
+                    _connection.Open();
+
+                // First check if the user has a credits record
+                string checkQuery = "SELECT COUNT(*) FROM user_credits WHERE user_id = @UserId";
+                using var checkCmd = new MySqlCommand(checkQuery, _connection);
+                checkCmd.Parameters.AddWithValue("@UserId", userId);
+                int hasCreditsRecord = Convert.ToInt32(checkCmd.ExecuteScalar());
+                
+                // If no credits record exists, create one with default values
+                if (hasCreditsRecord == 0)
+                {
+                    string insertQuery = @"
+                        INSERT INTO user_credits (user_id, credits_remaining, last_reset_date) 
+                        VALUES (@UserId, 10, CURRENT_DATE)";
+                    using var insertCmd = new MySqlCommand(insertQuery, _connection);
+                    insertCmd.Parameters.AddWithValue("@UserId", userId);
+                    insertCmd.ExecuteNonQuery();
+                    return 10; // Default credits
+                }
+                
+                // Get the credits remaining
+                using var cmd = new MySqlCommand(query, _connection);
+                cmd.Parameters.AddWithValue("@UserId", userId);
+                return Convert.ToInt32(cmd.ExecuteScalar());
+            }
+            finally
+            {
+                if (_connection.State == System.Data.ConnectionState.Open)
+                    _connection.Close();
+            }
+        }
+        
+        public bool UseCredit(int userId)
+        {
+            string query = @"
+                UPDATE user_credits 
+                SET credits_remaining = credits_remaining - 1 
+                WHERE user_id = @UserId AND credits_remaining > 0";
+
+            try
+            {
+                if (_connection.State != System.Data.ConnectionState.Open)
+                    _connection.Open();
+
+                using var cmd = new MySqlCommand(query, _connection);
+                cmd.Parameters.AddWithValue("@UserId", userId);
+                int rowsAffected = cmd.ExecuteNonQuery();
+                
+                return rowsAffected > 0;
+            }
+            finally
+            {
+                if (_connection.State == System.Data.ConnectionState.Open)
+                    _connection.Close();
+            }
+        }
+        
+        public void ResetCreditsIfNeeded(int userId)
+        {
+            string query = @"
+                UPDATE user_credits 
+                SET credits_remaining = 10, last_reset_date = CURRENT_DATE 
+                WHERE user_id = @UserId AND DATE(last_reset_date) < DATE(CURRENT_DATE)";
+
+            try
+            {
+                if (_connection.State != System.Data.ConnectionState.Open)
+                    _connection.Open();
+
+                // First check if the user has a credits record
+                string checkQuery = "SELECT COUNT(*) FROM user_credits WHERE user_id = @UserId";
+                using var checkCmd = new MySqlCommand(checkQuery, _connection);
+                checkCmd.Parameters.AddWithValue("@UserId", userId);
+                int hasCreditsRecord = Convert.ToInt32(checkCmd.ExecuteScalar());
+                
+                // If no credits record exists, create one with default values
+                if (hasCreditsRecord == 0)
+                {
+                    string insertQuery = @"
+                        INSERT INTO user_credits (user_id, credits_remaining, last_reset_date) 
+                        VALUES (@UserId, 10, CURRENT_DATE)";
+                    using var insertCmd = new MySqlCommand(insertQuery, _connection);
+                    insertCmd.Parameters.AddWithValue("@UserId", userId);
+                    insertCmd.ExecuteNonQuery();
+                    return; // Record created with default values
+                }
+                
+                // Reset credits if needed
+                using var cmd = new MySqlCommand(query, _connection);
+                cmd.Parameters.AddWithValue("@UserId", userId);
+                cmd.ExecuteNonQuery();
+            }
+            finally
+            {
+                if (_connection.State == System.Data.ConnectionState.Open)
+                    _connection.Close();
+            }
+        }
+
+        // Methods required by interface
+        public List<User> GetAllUsers()
+        {
+            var users = new List<User>();
+            
+            string query = "SELECT * FROM Users";
+
+            try
+            {
+                if (_connection.State != System.Data.ConnectionState.Open)
+                    _connection.Open();
+
+                using var cmd = new MySqlCommand(query, _connection);
+                using var reader = cmd.ExecuteReader();
+                
+                while (reader.Read())
+                {
+                    var user = new User
+                    {
+                        UserID = reader.GetInt32("UserID"),
+                        FullName = reader.GetString("FullName"),
+                        Age = reader.GetInt32("Age"),
+                        GenderID = reader.GetInt32("GenderID"),
+                        CareerID = reader.GetInt32("CareerID"),
+                        CityID = reader.GetInt32("CityID"),
+                        OrientationID = reader.GetInt32("OrientationID"),
+                        ProfilePhrase = reader.GetString("ProfilePhrase"),
+                        MinPreferredAge = reader.GetInt32("MinPreferredAge"),
+                        MaxPreferredAge = reader.GetInt32("MaxPreferredAge"),
+                        IsVerified = reader.GetBoolean("IsVerified")
+                    };
+                    
+                    users.Add(user);
+                }
+            }
+            finally
+            {
+                if (_connection.State == System.Data.ConnectionState.Open)
+                    _connection.Close();
+            }
+
+            return users;
+        }
+        
+        public User? CreateUser(User user)
+        {
+            // This method is essentially a renamed RegisterUser
+            RegisterUser(user);
+            return user;
+        }
+        
+        public bool UpdateUser(User user)
+        {
+            string query = @"UPDATE Users 
+                           SET FullName = @FullName, 
+                               Age = @Age, 
+                               GenderID = @GenderID, 
+                               CareerID = @CareerID, 
+                               CityID = @CityID, 
+                               OrientationID = @OrientationID, 
+                               ProfilePhrase = @ProfilePhrase, 
+                               MinPreferredAge = @MinPreferredAge, 
+                               MaxPreferredAge = @MaxPreferredAge, 
+                               IsVerified = @IsVerified
+                           WHERE UserID = @UserID";
+
+            try
+            {
+                if (_connection.State != System.Data.ConnectionState.Open)
+                    _connection.Open();
+
+                using var cmd = new MySqlCommand(query, _connection);
+                cmd.Parameters.AddWithValue("@UserID", user.UserID);
+                cmd.Parameters.AddWithValue("@FullName", user.FullName);
+                cmd.Parameters.AddWithValue("@Age", user.Age);
+                cmd.Parameters.AddWithValue("@GenderID", user.GenderID);
+                cmd.Parameters.AddWithValue("@CareerID", user.CareerID);
+                cmd.Parameters.AddWithValue("@CityID", user.CityID);
+                cmd.Parameters.AddWithValue("@OrientationID", user.OrientationID);
+                cmd.Parameters.AddWithValue("@ProfilePhrase", user.ProfilePhrase);
+                cmd.Parameters.AddWithValue("@MinPreferredAge", user.MinPreferredAge);
+                cmd.Parameters.AddWithValue("@MaxPreferredAge", user.MaxPreferredAge);
+                cmd.Parameters.AddWithValue("@IsVerified", user.IsVerified);
+
+                int rowsAffected = cmd.ExecuteNonQuery();
+                return rowsAffected > 0;
+            }
+            finally
+            {
+                if (_connection.State == System.Data.ConnectionState.Open)
+                    _connection.Close();
+            }
+        }
+        
+        public bool DeleteUser(int userId)
+        {
+            string query = "DELETE FROM Users WHERE UserID = @UserID";
+
+            try
+            {
+                if (_connection.State != System.Data.ConnectionState.Open)
+                    _connection.Open();
+
+                using var cmd = new MySqlCommand(query, _connection);
+                cmd.Parameters.AddWithValue("@UserID", userId);
+
+                int rowsAffected = cmd.ExecuteNonQuery();
+                return rowsAffected > 0;
+            }
+            finally
+            {
+                if (_connection.State == System.Data.ConnectionState.Open)
+                    _connection.Close();
+            }
         }
     }
 } 
