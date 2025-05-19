@@ -396,5 +396,350 @@ namespace campus_love_app.infrastructure.repositories
             
             return interactionsList;
         }
+
+        public Dictionary<string, string> GetUserBasicStatistics(int userId)
+        {
+            var stats = new Dictionary<string, string>();
+            
+            try
+            {
+                if (_connection.State != System.Data.ConnectionState.Open)
+                    _connection.Open();
+                    
+                // Total de likes dados
+                string likesGivenQuery = @"
+                    SELECT COUNT(*) FROM Interactions 
+                    WHERE FromUserID = @UserId AND InteractionType = 'LIKE'";
+                using (var cmd = new MySqlCommand(likesGivenQuery, _connection))
+                {
+                    cmd.Parameters.AddWithValue("@UserId", userId);
+                    int likesGiven = Convert.ToInt32(cmd.ExecuteScalar());
+                    stats.Add("Likes Given", likesGiven.ToString());
+                }
+                
+                // Total de likes recibidos
+                string likesReceivedQuery = @"
+                    SELECT COUNT(*) FROM Interactions 
+                    WHERE ToUserID = @UserId AND InteractionType = 'LIKE'";
+                using (var cmd = new MySqlCommand(likesReceivedQuery, _connection))
+                {
+                    cmd.Parameters.AddWithValue("@UserId", userId);
+                    int likesReceived = Convert.ToInt32(cmd.ExecuteScalar());
+                    stats.Add("Likes Received", likesReceived.ToString());
+                }
+                
+                // Número de matches
+                string matchesQuery = @"
+                    SELECT COUNT(*) FROM Matches 
+                    WHERE User1ID = @UserId OR User2ID = @UserId";
+                using (var cmd = new MySqlCommand(matchesQuery, _connection))
+                {
+                    cmd.Parameters.AddWithValue("@UserId", userId);
+                    int matches = Convert.ToInt32(cmd.ExecuteScalar());
+                    stats.Add("Total Matches", matches.ToString());
+                }
+
+                // Ratio de éxito (matches / likes recibidos)
+                if (stats.ContainsKey("Likes Received") && stats.ContainsKey("Total Matches"))
+                {
+                    int likesReceived = int.Parse(stats["Likes Received"]);
+                    int totalMatches = int.Parse(stats["Total Matches"]);
+                    
+                    if (likesReceived > 0)
+                    {
+                        double ratio = (double)totalMatches / likesReceived * 100;
+                        stats.Add("Match Success Rate", $"{ratio:F1}%");
+                    }
+                    else
+                    {
+                        stats.Add("Match Success Rate", "N/A");
+                    }
+                }
+                
+                // Fecha del primer y último match
+                string matchDatesQuery = @"
+                    SELECT MIN(MatchDate) as FirstMatch, MAX(MatchDate) as LastMatch 
+                    FROM Matches 
+                    WHERE User1ID = @UserId OR User2ID = @UserId";
+                using (var cmd = new MySqlCommand(matchDatesQuery, _connection))
+                {
+                    cmd.Parameters.AddWithValue("@UserId", userId);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read() && !reader.IsDBNull(reader.GetOrdinal("LastMatch")))
+                        {
+                            DateTime firstMatch = reader.GetDateTime("FirstMatch");
+                            DateTime lastMatch = reader.GetDateTime("LastMatch");
+                            
+                            stats.Add("First Match", firstMatch.ToString("MMM d, yyyy"));
+                            stats.Add("Last Match", lastMatch.ToString("MMM d, yyyy"));
+                        }
+                        else
+                        {
+                            stats.Add("Match History", "No matches yet");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ERROR getting basic user stats: {ex.Message}");
+            }
+            finally
+            {
+                if (_connection.State == System.Data.ConnectionState.Open)
+                    _connection.Close();
+            }
+            
+            return stats;
+        }
+        
+        public Dictionary<string, string> GetUserBehaviorStatistics(int userId)
+        {
+            var stats = new Dictionary<string, string>();
+            
+            try
+            {
+                if (_connection.State != System.Data.ConnectionState.Open)
+                    _connection.Open();
+                    
+                // Total de perfiles vistos (estimación basada en interacciones)
+                string profilesViewedQuery = @"
+                    SELECT COUNT(*) FROM Interactions 
+                    WHERE FromUserID = @UserId";
+                using (var cmd = new MySqlCommand(profilesViewedQuery, _connection))
+                {
+                    cmd.Parameters.AddWithValue("@UserId", userId);
+                    int profilesViewed = Convert.ToInt32(cmd.ExecuteScalar());
+                    stats.Add("Profiles Viewed", profilesViewed.ToString());
+                }
+                
+                // Distribución de likes/dislikes
+                string distributionQuery = @"
+                    SELECT InteractionType, COUNT(*) as Count 
+                    FROM Interactions 
+                    WHERE FromUserID = @UserId 
+                    GROUP BY InteractionType";
+                using (var cmd = new MySqlCommand(distributionQuery, _connection))
+                {
+                    cmd.Parameters.AddWithValue("@UserId", userId);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        int likes = 0;
+                        int dislikes = 0;
+                        
+                        while (reader.Read())
+                        {
+                            string type = reader.GetString("InteractionType");
+                            int count = reader.GetInt32("Count");
+                            
+                            if (type == "LIKE") likes = count;
+                            else if (type == "DISLIKE") dislikes = count;
+                        }
+                        
+                        int total = likes + dislikes;
+                        if (total > 0)
+                        {
+                            double likePercent = (double)likes / total * 100;
+                            stats.Add("Like Ratio", $"{likePercent:F1}% likes, {(100-likePercent):F1}% dislikes");
+                        }
+                        else
+                        {
+                            stats.Add("Like Ratio", "No interactions yet");
+                        }
+                    }
+                }
+                
+                // Carreras/intereses a los que más likes das
+                string likedCareersQuery = @"
+                    SELECT c.CareerName, COUNT(*) as Count
+                    FROM Interactions i
+                    JOIN Users u ON i.ToUserID = u.UserID
+                    JOIN Careers c ON u.CareerID = c.CareerID
+                    WHERE i.FromUserID = @UserId AND i.InteractionType = 'LIKE'
+                    GROUP BY c.CareerName
+                    ORDER BY Count DESC
+                    LIMIT 1";
+                using (var cmd = new MySqlCommand(likedCareersQuery, _connection))
+                {
+                    cmd.Parameters.AddWithValue("@UserId", userId);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            string careerName = reader.GetString("CareerName");
+                            int count = reader.GetInt32("Count");
+                            stats.Add("Favorite Career", careerName);
+                        }
+                        else
+                        {
+                            stats.Add("Favorite Career", "Not enough data");
+                        }
+                    }
+                }
+                
+                // Día de la semana con más actividad
+                string dayOfWeekQuery = @"
+                    SELECT 
+                        DAYNAME(InteractionDate) as DayOfWeek,
+                        COUNT(*) as Count
+                    FROM Interactions
+                    WHERE FromUserID = @UserId
+                    GROUP BY DayOfWeek
+                    ORDER BY Count DESC
+                    LIMIT 1";
+                using (var cmd = new MySqlCommand(dayOfWeekQuery, _connection))
+                {
+                    cmd.Parameters.AddWithValue("@UserId", userId);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read() && reader.GetInt32("Count") > 0)
+                        {
+                            string dayOfWeek = reader.GetString("DayOfWeek");
+                            stats.Add("Most Active Day", dayOfWeek);
+                        }
+                        else
+                        {
+                            stats.Add("Most Active Day", "Not enough data");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ERROR getting behavior stats: {ex.Message}");
+            }
+            finally
+            {
+                if (_connection.State == System.Data.ConnectionState.Open)
+                    _connection.Close();
+            }
+            
+            return stats;
+        }
+        
+        public Dictionary<string, string> GetUserComparativeStatistics(int userId)
+        {
+            var stats = new Dictionary<string, string>();
+            
+            try
+            {
+                if (_connection.State != System.Data.ConnectionState.Open)
+                    _connection.Open();
+                    
+                // Ranking de likes recibidos
+                string rankingQuery = @"
+                    SELECT 
+                        u.UserID,
+                        COUNT(*) as LikeCount,
+                        (SELECT COUNT(*) FROM Users) as TotalUsers
+                    FROM Interactions i
+                    JOIN Users u ON u.UserID = i.ToUserID
+                    WHERE i.InteractionType = 'LIKE'
+                    GROUP BY u.UserID
+                    ORDER BY LikeCount DESC";
+                using (var cmd = new MySqlCommand(rankingQuery, _connection))
+                {
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        int rank = 0;
+                        int totalUsers = 0;
+                        bool foundUser = false;
+                        
+                        while (reader.Read())
+                        {
+                            rank++;
+                            totalUsers = reader.GetInt32("TotalUsers");
+                            if (reader.GetInt32("UserID") == userId)
+                            {
+                                foundUser = true;
+                                double percentile = 100 - ((double)rank / totalUsers * 100);
+                                stats.Add("Popularity Ranking", $"{rank} of {totalUsers} (top {percentile:F1}%)");
+                                break;
+                            }
+                        }
+                        
+                        if (!foundUser && totalUsers > 0)
+                        {
+                            stats.Add("Popularity Ranking", $"Below top {totalUsers}");
+                        }
+                    }
+                }
+                
+                // Comparación con promedio de matches
+                string avgMatchesQuery = @"
+                    SELECT 
+                        (SELECT COUNT(*) FROM Matches WHERE User1ID = @UserId OR User2ID = @UserId) as UserMatches,
+                        (SELECT COUNT(*) FROM Matches) / (SELECT COUNT(*) FROM Users) as AvgMatches";
+                using (var cmd = new MySqlCommand(avgMatchesQuery, _connection))
+                {
+                    cmd.Parameters.AddWithValue("@UserId", userId);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            int userMatches = reader.GetInt32("UserMatches");
+                            double avgMatches = reader.GetDouble("AvgMatches");
+                            
+                            double ratio = avgMatches > 0 ? userMatches / avgMatches : 0;
+                            string comparison = ratio >= 1 ? $"{ratio:F1}x above average" : $"{(1/ratio):F1}x below average";
+                            
+                            stats.Add("Matches vs Average", comparison);
+                        }
+                    }
+                }
+                
+                // Comparación con promedio de likes recibidos
+                string avgLikesQuery = @"
+                    SELECT 
+                        (SELECT COUNT(*) FROM Interactions WHERE ToUserID = @UserId AND InteractionType = 'LIKE') as UserLikes,
+                        (SELECT COUNT(*) FROM Interactions WHERE InteractionType = 'LIKE') / (SELECT COUNT(*) FROM Users) as AvgLikes";
+                using (var cmd = new MySqlCommand(avgLikesQuery, _connection))
+                {
+                    cmd.Parameters.AddWithValue("@UserId", userId);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            int userLikes = reader.GetInt32("UserLikes");
+                            double avgLikes = reader.GetDouble("AvgLikes");
+                            
+                            if (avgLikes > 0)
+                            {
+                                double ratio = userLikes / avgLikes;
+                                string comparison = ratio >= 1 ? $"{ratio:F1}x above average" : $"{(1/ratio):F1}x below average";
+                                stats.Add("Likes vs Average", comparison);
+                            }
+                            else
+                            {
+                                stats.Add("Likes vs Average", "Not enough data");
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ERROR getting comparative stats: {ex.Message}");
+            }
+            finally
+            {
+                if (_connection.State == System.Data.ConnectionState.Open)
+                    _connection.Close();
+            }
+            
+            return stats;
+        }
+        
+        public Dictionary<string, Dictionary<string, string>> GetAllUserStatistics(int userId)
+        {
+            var allStats = new Dictionary<string, Dictionary<string, string>>();
+            
+            allStats["Basic Stats"] = GetUserBasicStatistics(userId);
+            allStats["Behavior"] = GetUserBehaviorStatistics(userId);
+            allStats["Comparisons"] = GetUserComparativeStatistics(userId);
+            
+            return allStats;
+        }
     }
 } 

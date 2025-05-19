@@ -101,17 +101,17 @@ namespace campus_love_app
                                 break;
 
                             case 3: // Statistics
-                                // Example statistics - in a real app, these would come from a service
-                                var stats = new Dictionary<string, string>
+                                currentUser = ui.GetCurrentUser();
+                                if (currentUser != null)
                                 {
-                                    { "Total users", "256" },
-                                    { "Matches made", "78" },
-                                    { "Most liked user", "John Smith (32 likes)" },
-                                    { "Most popular interest", "Music (45%)" },
-                                    { "Most common career", "Computer Science (23%)" },
-                                    { "Match ratio", "18%" }
-                                };
-                                ui.ShowStatistics(stats);
+                                    // Obtener estadísticas personalizadas para el usuario actual
+                                    var userStats = userRepository.GetAllUserStatistics(currentUser.UserID);
+                                    ui.ShowUserDetailedStatistics(userStats);
+                                }
+                                else
+                                {
+                                    ui.ShowError("You must be logged in to view your statistics.");
+                                }
                                 break;
                                 
                             case 4: // Logout

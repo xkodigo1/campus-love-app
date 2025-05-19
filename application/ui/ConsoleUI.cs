@@ -704,6 +704,54 @@ namespace campus_love_app.application.ui
             PressAnyKey();
         }
 
+        public void ShowUserDetailedStatistics(Dictionary<string, Dictionary<string, string>> categorizedStats)
+        {
+            Console.Clear();
+            DrawHeader("My Statistics");
+            
+            // Display a welcome message
+            AnsiConsole.MarkupLine("[bold magenta]Here are your personal statistics:[/]");
+            AnsiConsole.WriteLine();
+            
+            // Display each category of statistics
+            foreach (var category in categorizedStats)
+            {
+                AnsiConsole.MarkupLine($"[bold underline]{category.Key}[/]");
+                
+                // Create a table for each category
+                var table = new Table()
+                    .Border(TableBorder.Rounded)
+                    .BorderColor(GetColorForCategory(category.Key))
+                    .AddColumn(new TableColumn("Metric").LeftAligned())
+                    .AddColumn(new TableColumn("Value").RightAligned())
+                    .Expand();
+                
+                foreach (var stat in category.Value)
+                {
+                    table.AddRow(
+                        $"[{GetColorForCategory(category.Key)}]{stat.Key}[/]",
+                        $"[bold white]{stat.Value}[/]"
+                    );
+                }
+                
+                AnsiConsole.Write(table);
+                AnsiConsole.WriteLine();
+            }
+            
+            PressAnyKey();
+        }
+        
+        private Color GetColorForCategory(string category)
+        {
+            return category switch
+            {
+                "Basic Stats" => Color.Magenta1,
+                "Behavior" => Color.Green,
+                "Comparisons" => Color.Gold1,
+                _ => Color.Blue
+            };
+        }
+
         public void ShowError(string message)
         {
             AnsiConsole.MarkupLine($"[bold red]Error:[/] {message}");
