@@ -34,7 +34,7 @@ namespace campus_love_app
             var loginService = new LoginService(userRepository, accountRepository);
 
             // Initialize the UI
-            var ui = new ConsoleUI(locationRepository, careerRepository, genderRepository, orientationRepository);
+            var ui = new ConsoleUI(locationRepository, careerRepository, genderRepository, orientationRepository, userRepository);
 
             // Show the welcome screen
             ui.ShowWelcome();
@@ -82,7 +82,7 @@ namespace campus_love_app
                                     var availableProfiles = userRepository.GetAvailableProfiles(currentUser.UserID);
                                     if (availableProfiles.Count > 0)
                                     {
-                                        ui.ShowUserProfile(availableProfiles[0]);
+                                        ui.ShowUserProfile(availableProfiles[0], false, availableProfiles, 0);
                                     }
                                     else
                                     {
