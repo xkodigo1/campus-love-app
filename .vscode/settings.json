@@ -6,6 +6,7 @@
         "auth",
         "data",
         "database",
-        "stats"
+        "stats",
+        "json"
     ]
 }
