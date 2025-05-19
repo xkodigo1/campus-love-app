@@ -114,9 +114,10 @@ namespace campus_love_app.application.ui
                 // User is logged in
                 choices.Add("1. View profiles");
                 choices.Add("2. View matches");
-                choices.Add("3. View statistics");
-                choices.Add("4. Logout");
-                choices.Add("5. Exit");
+                choices.Add("3. Messages");
+                choices.Add("4. View statistics");
+                choices.Add("5. Logout");
+                choices.Add("6. Exit");
             }
 
             // Create a selector for the main menu
@@ -617,7 +618,7 @@ namespace campus_love_app.application.ui
             }
         }
 
-        public void ShowMatches(List<User> matches)
+        public void ShowMatches(List<User> matches, IChatRepository chatRepository)
         {
             Console.Clear();
             DrawHeader("My Matches");
@@ -639,14 +640,14 @@ namespace campus_love_app.application.ui
                 .BorderColor(Color.Yellow)
                 .AddColumn(new TableColumn("Name").Centered())
                 .AddColumn(new TableColumn("Age").Centered())
-                .AddColumn(new TableColumn("Action").Centered());
+                .AddColumn(new TableColumn("Actions").Centered());
 
             foreach (var match in matches)
             {
                 table.AddRow(
                     $"[bold]{match.FullName}[/]",
                     match.Age.ToString(),
-                    $"[link=view:{match.UserID}]View profile[/]"
+                    $"[link=view:{match.UserID}]View[/] | [link=chat:{match.UserID}]Chat[/]"
                 );
             }
             
@@ -656,15 +657,16 @@ namespace campus_love_app.application.ui
             // Interaction to view a specific profile or return to the menu
             var options = new List<string> { "⬅️ Back to menu" };
             options.AddRange(matches.Select(m => $"View profile #{m.UserID}"));
+            options.AddRange(matches.Select(m => $"Chat with #{m.UserID}"));
             
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title("[yellow]What would you like to do?[/]")
-                    .PageSize(Math.Max(3, Math.Min(10, matches.Count + 1)))
+                    .PageSize(Math.Max(3, Math.Min(10, matches.Count * 2 + 1)))
                     .HighlightStyle(new Style(foreground: Color.Yellow))
                     .AddChoices(options));
             
-            if (choice != "⬅️ Back to menu")
+            if (choice.StartsWith("View profile #"))
             {
                 // Extract the selected user ID
                 string selectedIdText = choice.Replace("View profile #", "");
@@ -674,6 +676,221 @@ namespace campus_love_app.application.ui
                     var selectedUser = matches.First(m => m.UserID == selectedId);
                     // Show their profile
                     ShowUserProfile(selectedUser, true);
+                }
+            }
+            else if (choice.StartsWith("Chat with #"))
+            {
+                // Extract the selected user ID
+                string selectedIdText = choice.Replace("Chat with #", "");
+                if (int.TryParse(selectedIdText, out int selectedId) && _currentUser != null)
+                {
+                    // Get or create a conversation with this user
+                    int currentUserId = _currentUser.UserID;
+                    var conversation = chatRepository.GetConversationBetweenUsers(currentUserId, selectedId);
+                    if (conversation == null)
+                    {
+                        int conversationId = chatRepository.CreateConversation(currentUserId, selectedId);
+                        conversation = chatRepository.GetConversation(conversationId);
+                    }
+                    
+                    if (conversation != null)
+                    {
+                        // Show the chat conversation
+                        ShowChatConversation(conversation, chatRepository);
+                    }
+                    else
+                    {
+                        ShowError("Failed to start chat. Please try again.");
+                    }
+                }
+            }
+        }
+
+        public void ShowConversations(List<Conversation> conversations, int currentUserId, IChatRepository chatRepository)
+        {
+            Console.Clear();
+            DrawHeader("My Messages");
+            
+            if (conversations.Count == 0)
+            {
+                AnsiConsole.MarkupLine("[blue]You don't have any conversations yet.[/]");
+                AnsiConsole.MarkupLine("[grey]Start chatting with your matches![/]");
+                AnsiConsole.WriteLine();
+                PressAnyKey();
+                return;
+            }
+            
+            AnsiConsole.MarkupLine($"[grey]You have [blue]{conversations.Count}[/] conversations[/]");
+            AnsiConsole.WriteLine();
+            
+            // Show conversations list
+            var table = new Table()
+                .Border(TableBorder.Rounded)
+                .BorderColor(Color.Blue)
+                .AddColumn(new TableColumn("With").Centered())
+                .AddColumn(new TableColumn("Last Message").Centered())
+                .AddColumn(new TableColumn("Unread").Centered())
+                .Expand();
+                
+            foreach (var conversation in conversations)
+            {
+                // Get the other user in the conversation
+                string otherUserName = conversation.User1ID == currentUserId 
+                    ? conversation.User2?.FullName ?? "Unknown" 
+                    : conversation.User1?.FullName ?? "Unknown";
+                
+                // Get unread count
+                int unreadCount = conversation.GetUnreadCount(currentUserId);
+                
+                table.AddRow(
+                    $"[bold]{otherUserName}[/]",
+                    $"{conversation.LastMessageDate.ToString("MM/dd HH:mm")}",
+                    unreadCount > 0 ? $"[bold red]{unreadCount}[/]" : "0"
+                );
+            }
+            
+            AnsiConsole.Write(table);
+            AnsiConsole.WriteLine();
+            
+            // Let user select a conversation
+            var options = new List<string> { "⬅️ Back to menu" };
+            options.AddRange(conversations.Select(c => {
+                string otherUserName = c.User1ID == currentUserId 
+                    ? c.User2?.FullName ?? "Unknown" 
+                    : c.User1?.FullName ?? "Unknown";
+                return $"Chat with {otherUserName}";
+            }));
+            
+            var choice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[blue]Select a conversation:[/]")
+                    .PageSize(Math.Max(3, Math.Min(10, conversations.Count + 1)))
+                    .HighlightStyle(new Style(foreground: Color.Blue))
+                    .AddChoices(options));
+            
+            if (choice != "⬅️ Back to menu")
+            {
+                // Extract the selected user name
+                string selectedUserName = choice.Replace("Chat with ", "");
+                
+                // Find the corresponding conversation
+                var selectedConversation = conversations.FirstOrDefault(c => 
+                    (c.User1ID == currentUserId && c.User2?.FullName == selectedUserName) || 
+                    (c.User2ID == currentUserId && c.User1?.FullName == selectedUserName));
+                
+                if (selectedConversation != null)
+                {
+                    // Show the chat conversation
+                    ShowChatConversation(selectedConversation, chatRepository);
+                }
+            }
+        }
+        
+        public void ShowChatConversation(Conversation conversation, IChatRepository chatRepository)
+        {
+            if (_currentUser == null) return;
+            
+            int currentUserId = _currentUser.UserID;
+            int otherUserId = conversation.GetOtherUserID(currentUserId);
+            string otherUserName = conversation.User1ID == currentUserId 
+                ? conversation.User2?.FullName ?? "Unknown" 
+                : conversation.User1?.FullName ?? "Unknown";
+            
+            bool continueChat = true;
+            
+            while (continueChat)
+            {
+                Console.Clear();
+                DrawHeader($"Chat with {otherUserName}");
+                
+                // Get messages for this conversation
+                var messages = chatRepository.GetConversationMessages(conversation.ConversationID);
+                
+                // Mark messages as read
+                chatRepository.MarkMessagesAsRead(conversation.ConversationID, currentUserId);
+                
+                if (messages.Count == 0)
+                {
+                    AnsiConsole.MarkupLine("[grey]No messages yet. Start the conversation![/]");
+                    AnsiConsole.WriteLine();
+                }
+                else
+                {
+                    // Show messages using a much simpler approach
+                    foreach (var message in messages)
+                    {
+                        bool isMine = message.SenderID == currentUserId;
+                        string senderName = isMine ? "You" : otherUserName;
+                        Color messageColor = isMine ? Color.Green : Color.Blue;
+                        
+                        // Escape markup in the message text to prevent formatting issues
+                        string escapedText = Markup.Escape(message.MessageText);
+                        
+                        // Create a simple table instead of a panel
+                        var table = new Table()
+                            .Border(TableBorder.Rounded)
+                            .BorderColor(messageColor)
+                            .AddColumn(new TableColumn($"[{messageColor.ToMarkup()}]{senderName}[/] ({message.SentDate.ToString("MM/dd HH:mm")})"));
+                        
+                        table.AddRow(escapedText);
+                        
+                        // For my messages, right align the table, for others, left align
+                        if (isMine)
+                        {
+                            AnsiConsole.Write(new Rule().RuleStyle(Style.Plain));
+                            AnsiConsole.Write(table.RightAligned());
+                        }
+                        else
+                        {
+                            AnsiConsole.Write(table.LeftAligned());
+                        }
+                        
+                        AnsiConsole.WriteLine();
+                    }
+                }
+                
+                AnsiConsole.WriteLine();
+                
+                // Options for the user
+                var options = new List<string> 
+                {
+                    "📝 Send message",
+                    "⬅️ Back to conversations"
+                };
+                
+                var choice = AnsiConsole.Prompt(
+                    new SelectionPrompt<string>()
+                        .Title("[blue]What would you like to do?[/]")
+                        .PageSize(3)
+                        .HighlightStyle(new Style(foreground: Color.Blue))
+                        .AddChoices(options));
+                
+                if (choice == "📝 Send message")
+                {
+                    try
+                    {
+                        // Get the message text
+                        var messageText = AnsiConsole.Ask<string>("[green]Your message:[/]");
+                        
+                        if (!string.IsNullOrWhiteSpace(messageText))
+                        {
+                            // Send the message
+                            int messageId = chatRepository.SendMessage(conversation.ConversationID, currentUserId, messageText);
+                            
+                            if (messageId <= 0)
+                            {
+                                ShowError("Failed to send message. Please try again.");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        ShowError($"Error sending message: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    continueChat = false;
                 }
             }
         }

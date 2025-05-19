@@ -29,6 +29,7 @@ namespace campus_love_app
             ICareerRepository careerRepository = new CareerRepository();
             IGenderRepository genderRepository = new GenderRepository();
             ISexualOrientationRepository orientationRepository = new SexualOrientationRepository();
+            IChatRepository chatRepository = new ChatRepository();
             
             // Initialize services
             var loginService = new LoginService(userRepository, accountRepository);
@@ -96,11 +97,20 @@ namespace campus_love_app
                                 if (currentUser != null)
                                 {
                                     var matches = userRepository.GetMatches(currentUser.UserID);
-                                    ui.ShowMatches(matches);
+                                    ui.ShowMatches(matches, chatRepository);
                                 }
                                 break;
 
-                            case 3: // Statistics
+                            case 3: // Messages/Conversations
+                                currentUser = ui.GetCurrentUser();
+                                if (currentUser != null)
+                                {
+                                    var conversations = chatRepository.GetUserConversations(currentUser.UserID);
+                                    ui.ShowConversations(conversations, currentUser.UserID, chatRepository);
+                                }
+                                break;
+
+                            case 4: // Statistics
                                 currentUser = ui.GetCurrentUser();
                                 if (currentUser != null)
                                 {
@@ -114,11 +124,11 @@ namespace campus_love_app
                                 }
                                 break;
                                 
-                            case 4: // Logout
+                            case 5: // Logout
                                 ui.ShowLogout();
                                 break;
 
-                            case 5: // Exit
+                            case 6: // Exit
                                 exit = true;
                                 ui.ShowGoodbye();
                                 break;
