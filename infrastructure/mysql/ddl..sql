@@ -170,3 +170,24 @@ CREATE INDEX idx_conversation_messages ON Messages(ConversationID, SentDate);
 -- Index for unread message count queries
 CREATE INDEX idx_unread_messages ON Messages(ConversationID, SenderID, IsRead);
 
+-- Table for User Credits
+CREATE TABLE IF NOT EXISTS user_credits (
+    user_id INT PRIMARY KEY,
+    credits_remaining INT NOT NULL DEFAULT 10,
+    last_reset_date DATE NOT NULL DEFAULT (CURDATE()),
+    FOREIGN KEY (user_id) REFERENCES Users(UserID)
+);
+
+-- Trigger to reset credits daily (this would typically be handled by a scheduled job)
+DELIMITER //
+CREATE TRIGGER IF NOT EXISTS reset_user_credits
+BEFORE UPDATE ON user_credits
+FOR EACH ROW
+BEGIN
+    IF DATE(OLD.last_reset_date) < DATE(CURDATE()) THEN
+        SET NEW.credits_remaining = 10;
+        SET NEW.last_reset_date = CURDATE();
+    END IF;
+END//
+DELIMITER ; 
+

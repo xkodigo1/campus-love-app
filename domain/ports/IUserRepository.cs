@@ -8,10 +8,19 @@ namespace campus_love_app.domain.ports
 {
     public interface IUserRepository
     {
-        void RegisterUser(User user);
-        List<User> GetAvailableProfiles(int userId);
-        void LikeUser(int fromUserId, int toUserId);
+        List<User> GetAllUsers();
+        User GetUserById(int userId);
+        User? CreateUser(User user);
+        bool UpdateUser(User user);
+        bool DeleteUser(int userId);
+        List<User> GetAvailableProfiles(int currentUserId);
+        void LikeUser(int likerId, int likedId);
         List<User> GetMatches(int userId);
-        User? GetUserById(int userId);
+        Dictionary<string, Dictionary<string, string>> GetAllUserStatistics(int userId);
+        
+        // Credit management methods
+        int GetRemainingCredits(int userId);
+        bool UseCredit(int userId);
+        void ResetCreditsIfNeeded(int userId);
     }
 }
