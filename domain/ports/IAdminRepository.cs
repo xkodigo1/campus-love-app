@@ -15,5 +15,14 @@ namespace campus_love_app.domain.ports
         bool UnbanUser(int userId);
         bool DeleteUser(int userId);
         List<User> SearchUsers(string searchTerm);
+        
+        // Statistics methods
+        Dictionary<string, int> GetUserStatistics();
+        Dictionary<string, Dictionary<string, int>> GetUserDemographics();
+        Dictionary<string, int> GetInteractionStatistics();
+        Dictionary<string, int> GetCommunicationStatistics();
+        Dictionary<string, int> GetUsageStatistics();
+        Dictionary<string, int> GetCreditStatistics();
+        Dictionary<string, int> GetModerationStatistics();
     }
 } 

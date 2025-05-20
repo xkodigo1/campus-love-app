@@ -132,12 +132,12 @@ namespace campus_love_app
                                 adminUI.ShowUserManagementMenu();
                                 break;
 
-                            case 2: // App Statistics
-                                adminUI.ShowError("Statistics feature not yet implemented.");
+                            case 2: // App Statistics                                
+                                adminUI.ShowAppStatistics();
                                 break;
 
-                            case 3: // System Settings
-                                adminUI.ShowError("System settings not yet implemented.");
+                            case 3: // System Settings                                
+                                adminUI.ShowSystemSettings();
                                 break;
 
                             case 4: // Logout
