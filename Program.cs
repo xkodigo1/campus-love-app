@@ -30,10 +30,181 @@ namespace campus_love_app
             IGenderRepository genderRepository = new GenderRepository();
             ISexualOrientationRepository orientationRepository = new SexualOrientationRepository();
             IChatRepository chatRepository = new ChatRepository();
+            IAdminRepository adminRepository = new AdminRepository();
             
             // Initialize services
             var loginService = new LoginService(userRepository, accountRepository);
 
+            // First show admin or user selection
+            var accessType = ShowAccessTypeSelection();
+
+            if (accessType == "admin")
+            {
+                // Admin path
+                RunAdminInterface(adminRepository);
+            }
+            else
+            {
+                // User path
+                RunUserInterface(userRepository, accountRepository, locationRepository, careerRepository, genderRepository, orientationRepository, chatRepository, loginService);
+            }
+        }
+
+        private static string ShowAccessTypeSelection()
+        {
+            Console.Clear();
+
+            var title = new FigletText("Campus Love")
+                .Centered()
+                .Color(Color.HotPink);
+            
+            var panel = new Panel(title)
+                .Border(BoxBorder.Rounded)
+                .BorderColor(Color.HotPink)
+                .Padding(2, 1);
+
+            AnsiConsole.Write(panel);
+            
+            AnsiConsole.Write(new Rule("[italic magenta]Choose Access Type[/]").RuleStyle("magenta").Centered());
+            
+            AnsiConsole.WriteLine();
+
+            // Present the choice between admin and user access
+            var choices = new List<string>
+            {
+                "Administrator Access",
+                "User Access"
+            };
+
+            var choice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[magenta]Select your access type:[/]")
+                    .PageSize(3)
+                    .HighlightStyle(new Style(foreground: Color.HotPink))
+                    .AddChoices(choices));
+
+            return choice == "Administrator Access" ? "admin" : "user";
+        }
+
+        private static void RunAdminInterface(IAdminRepository adminRepository)
+        {
+            // Initialize the Admin UI
+            var adminUI = new AdminUI(adminRepository);
+
+            // Show the welcome screen
+            adminUI.ShowWelcome();
+
+            // Main application loop
+            bool exit = false;
+            while (!exit)
+            {
+                try
+                {
+                    int option = adminUI.ShowMainMenu();
+
+                    if (!adminUI.IsAdminLoggedIn())
+                    {
+                        // Admin is not logged in
+                        switch (option)
+                        {
+                            case 1: // Admin Login
+                                HandleAdminLogin(adminUI, adminRepository);
+                                break;
+
+                            case 2: // Exit
+                                exit = true;
+                                Console.Clear();
+                                AnsiConsole.MarkupLine("[grey]Thanks for using Campus Love Admin Panel.[/]");
+                                Console.WriteLine();
+                                break;
+
+                            default:
+                                adminUI.ShowError("Invalid option. Please try again.");
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        // Admin is logged in
+                        switch (option)
+                        {
+                            case 1: // User Management
+                                adminUI.ShowUserManagementMenu();
+                                break;
+
+                            case 2: // App Statistics
+                                adminUI.ShowError("Statistics feature not yet implemented.");
+                                break;
+
+                            case 3: // System Settings
+                                adminUI.ShowError("System settings not yet implemented.");
+                                break;
+
+                            case 4: // Logout
+                                adminUI.SetCurrentAdmin(null);
+                                AnsiConsole.MarkupLine("[green]You have been successfully logged out.[/]");
+                                break;
+
+                            case 5: // Exit
+                                exit = true;
+                                Console.Clear();
+                                AnsiConsole.MarkupLine("[grey]Thanks for using Campus Love Admin Panel.[/]");
+                                Console.WriteLine();
+                                break;
+
+                            default:
+                                adminUI.ShowError("Invalid option. Please try again.");
+                                break;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ShowError($"An unexpected error occurred: {ex.Message}", ex);
+                }
+            }
+        }
+
+        private static void HandleAdminLogin(AdminUI adminUI, IAdminRepository adminRepository)
+        {
+            try
+            {
+                var (username, password) = adminUI.ShowAdminLoginScreen();
+                
+                if (adminRepository.ValidateAdmin(username, password))
+                {
+                    var admin = adminRepository.GetAdminByUsername(username);
+                    adminUI.SetCurrentAdmin(admin);
+                    AnsiConsole.MarkupLine($"[green]Welcome, {admin.FullName}![/]");
+                }
+                else
+                {
+                    AnsiConsole.MarkupLine("[red]Invalid admin credentials.[/]");
+                }
+                
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[grey]Press any key to continue...[/]");
+                Console.ReadKey(true);
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[red]Login failed: {ex.Message}[/]");
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[grey]Press any key to continue...[/]");
+                Console.ReadKey(true);
+            }
+        }
+
+        private static void RunUserInterface(
+            UserRepository userRepository, 
+            IUserAccountRepository accountRepository,
+            ILocationRepository locationRepository,
+            ICareerRepository careerRepository,
+            IGenderRepository genderRepository,
+            ISexualOrientationRepository orientationRepository,
+            IChatRepository chatRepository,
+            LoginService loginService)
+        {
             // Initialize the UI
             var ui = new ConsoleUI(locationRepository, careerRepository, genderRepository, orientationRepository, userRepository);
 
@@ -114,7 +285,6 @@ namespace campus_love_app
                                 currentUser = ui.GetCurrentUser();
                                 if (currentUser != null)
                                 {
-                                    // Obtener estadísticas personalizadas para el usuario actual
                                     var userStats = userRepository.GetAllUserStatistics(currentUser.UserID);
                                     ui.ShowUserDetailedStatistics(userStats);
                                 }
