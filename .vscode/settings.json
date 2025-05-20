@@ -8,6 +8,8 @@
         "database",
         "stats",
         "json",
-        "messaging"
+        "messaging",
+        "profile",
+        "admin"
     ]
 }

@@ -58,6 +58,16 @@ CREATE TABLE Users (
     IsVerified BOOLEAN NOT NULL DEFAULT FALSE,
     CityID INT,
     RegistrationDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- Campos para enriquecimiento de perfil
+    ExtendedDescription TEXT DEFAULT NULL,
+    Hobbies TEXT DEFAULT NULL,
+    FavoriteBooks TEXT DEFAULT NULL,
+    FavoriteMovies TEXT DEFAULT NULL,
+    FavoriteMusic TEXT DEFAULT NULL,
+    InstagramProfile VARCHAR(255) DEFAULT NULL,
+    TwitterProfile VARCHAR(255) DEFAULT NULL,
+    LinkedInProfile VARCHAR(255) DEFAULT NULL,
+    HasEnrichedProfile BOOLEAN NOT NULL DEFAULT FALSE,
     FOREIGN KEY (GenderID) REFERENCES Genders(GenderID),
     FOREIGN KEY (CareerID) REFERENCES Careers(CareerID),
     FOREIGN KEY (OrientationID) REFERENCES SexualOrientations(OrientationID),
@@ -189,5 +199,21 @@ BEGIN
         SET NEW.last_reset_date = CURDATE();
     END IF;
 END//
-DELIMITER ; 
+DELIMITER ;
+
+-- Table for Administrators
+CREATE TABLE IF NOT EXISTS Administrators (
+    AdminID INT PRIMARY KEY AUTO_INCREMENT,
+    Username VARCHAR(50) NOT NULL UNIQUE,
+    PasswordHash VARCHAR(255) NOT NULL,
+    FullName VARCHAR(100) NOT NULL,
+    Email VARCHAR(100) NOT NULL UNIQUE,
+    LastLoginDate DATETIME,
+    IsActive BOOLEAN NOT NULL DEFAULT TRUE,
+    CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert a default admin account (password: admin123)
+INSERT INTO Administrators (Username, PasswordHash, FullName, Email)
+VALUES ('admin', '$2a$11$IQfYEsPUW8oHB5TfUxpKv.RPbFJC1JXA7MqKyzP5/WlEOzEMVkQJy', 'System Administrator', 'admin@campuslove.com');
 
