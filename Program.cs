@@ -111,10 +111,7 @@ namespace campus_love_app
                                 HandleAdminLogin(adminUI, adminRepository);
                                 break;
 
-                            case 2: // Switch to User Access
-                                return; // Return to let the program restart with user access
-
-                            case 3: // Exit
+                            case 2: // Exit
                                 exit = true;
                                 Console.Clear();
                                 AnsiConsole.MarkupLine("[grey]Thanks for using Campus Love Admin Panel.[/]");

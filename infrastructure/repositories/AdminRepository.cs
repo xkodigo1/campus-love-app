@@ -350,7 +350,8 @@ namespace campus_love_app.infrastructure.repositories
                 "Matches",
                 "Messages",
                 "Conversations",
-                "user_credits"
+                "user_credits",
+                "DailyCredits"
             };
 
             foreach (var table in tables)

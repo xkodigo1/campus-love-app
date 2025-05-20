@@ -71,8 +71,7 @@ namespace campus_love_app.application.ui
             {
                 // Admin is not logged in
                 choices.Add("1. Login as Admin");
-                choices.Add("2. User Access (Regular Login)");
-                choices.Add("3. Exit");
+                choices.Add("2. Exit");
             }
             else
             {
