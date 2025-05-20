@@ -199,5 +199,21 @@ BEGIN
         SET NEW.last_reset_date = CURDATE();
     END IF;
 END//
-DELIMITER ; 
+DELIMITER ;
+
+-- Table for Administrators
+CREATE TABLE IF NOT EXISTS Administrators (
+    AdminID INT PRIMARY KEY AUTO_INCREMENT,
+    Username VARCHAR(50) NOT NULL UNIQUE,
+    PasswordHash VARCHAR(255) NOT NULL,
+    FullName VARCHAR(100) NOT NULL,
+    Email VARCHAR(100) NOT NULL UNIQUE,
+    LastLoginDate DATETIME,
+    IsActive BOOLEAN NOT NULL DEFAULT TRUE,
+    CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert a default admin account (password: admin123)
+INSERT INTO Administrators (Username, PasswordHash, FullName, Email)
+VALUES ('admin', '$2a$11$IQfYEsPUW8oHB5TfUxpKv.RPbFJC1JXA7MqKyzP5/WlEOzEMVkQJy', 'System Administrator', 'admin@campuslove.com');
 

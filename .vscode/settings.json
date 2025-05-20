@@ -9,6 +9,7 @@
         "stats",
         "json",
         "messaging",
-        "profile"
+        "profile",
+        "admin"
     ]
 }
