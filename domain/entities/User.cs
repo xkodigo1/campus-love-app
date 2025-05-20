@@ -18,5 +18,16 @@ namespace campus_love_app.domain.entities
         public int MaxPreferredAge { get; set; }
         public bool IsVerified { get; set; }
         public int CityID { get; set; }
+        
+        // Campos para enriquecimiento de perfil
+        public string ExtendedDescription { get; set; } = string.Empty;
+        public string Hobbies { get; set; } = string.Empty;
+        public string FavoriteBooks { get; set; } = string.Empty;
+        public string FavoriteMovies { get; set; } = string.Empty;
+        public string FavoriteMusic { get; set; } = string.Empty;
+        public string InstagramProfile { get; set; } = string.Empty;
+        public string TwitterProfile { get; set; } = string.Empty;
+        public string LinkedInProfile { get; set; } = string.Empty;
+        public bool HasEnrichedProfile { get; set; } = false;
     }
 }

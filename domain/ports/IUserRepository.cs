@@ -22,5 +22,8 @@ namespace campus_love_app.domain.ports
         int GetRemainingCredits(int userId);
         bool UseCredit(int userId);
         void ResetCreditsIfNeeded(int userId);
+        
+        // Enriched profile methods
+        bool UpdateEnrichedProfile(User user);
     }
 }

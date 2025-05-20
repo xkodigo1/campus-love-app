@@ -124,11 +124,27 @@ namespace campus_love_app
                                 }
                                 break;
                                 
-                            case 5: // Logout
+                            case 5: // View daily credits
+                                currentUser = ui.GetCurrentUser();
+                                if (currentUser != null)
+                                {
+                                    ui.ShowRemainingCredits();
+                                }
+                                break;
+
+                            case 6: // Enrich profile
+                                currentUser = ui.GetCurrentUser();
+                                if (currentUser != null)
+                                {
+                                    ui.ShowEnrichedProfileEditor(currentUser);
+                                }
+                                break;
+                                
+                            case 7: // Logout
                                 ui.ShowLogout();
                                 break;
 
-                            case 6: // Exit
+                            case 8: // Exit
                                 exit = true;
                                 ui.ShowGoodbye();
                                 break;

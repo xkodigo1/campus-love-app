@@ -114,7 +114,26 @@ namespace campus_love_app.infrastructure.repositories
                         ProfilePhrase = reader.GetString("ProfilePhrase"),
                         MinPreferredAge = reader.GetInt32("MinPreferredAge"),
                         MaxPreferredAge = reader.GetInt32("MaxPreferredAge"),
-                        IsVerified = reader.GetBoolean("IsVerified")
+                        IsVerified = reader.GetBoolean("IsVerified"),
+                        // Nuevos campos de enriquecimiento de perfil
+                        ExtendedDescription = !reader.IsDBNull(reader.GetOrdinal("ExtendedDescription")) 
+                            ? reader.GetString("ExtendedDescription") : string.Empty,
+                        Hobbies = !reader.IsDBNull(reader.GetOrdinal("Hobbies")) 
+                            ? reader.GetString("Hobbies") : string.Empty,
+                        FavoriteBooks = !reader.IsDBNull(reader.GetOrdinal("FavoriteBooks")) 
+                            ? reader.GetString("FavoriteBooks") : string.Empty,
+                        FavoriteMovies = !reader.IsDBNull(reader.GetOrdinal("FavoriteMovies")) 
+                            ? reader.GetString("FavoriteMovies") : string.Empty,
+                        FavoriteMusic = !reader.IsDBNull(reader.GetOrdinal("FavoriteMusic")) 
+                            ? reader.GetString("FavoriteMusic") : string.Empty,
+                        InstagramProfile = !reader.IsDBNull(reader.GetOrdinal("InstagramProfile")) 
+                            ? reader.GetString("InstagramProfile") : string.Empty,
+                        TwitterProfile = !reader.IsDBNull(reader.GetOrdinal("TwitterProfile")) 
+                            ? reader.GetString("TwitterProfile") : string.Empty,
+                        LinkedInProfile = !reader.IsDBNull(reader.GetOrdinal("LinkedInProfile")) 
+                            ? reader.GetString("LinkedInProfile") : string.Empty,
+                        HasEnrichedProfile = !reader.IsDBNull(reader.GetOrdinal("HasEnrichedProfile")) 
+                            ? reader.GetBoolean("HasEnrichedProfile") : false
                     };
                     
                     users.Add(user);
@@ -330,7 +349,26 @@ namespace campus_love_app.infrastructure.repositories
                         ProfilePhrase = reader.GetString("ProfilePhrase"),
                         MinPreferredAge = reader.GetInt32("MinPreferredAge"),
                         MaxPreferredAge = reader.GetInt32("MaxPreferredAge"),
-                        IsVerified = reader.GetBoolean("IsVerified")
+                        IsVerified = reader.GetBoolean("IsVerified"),
+                        // Nuevos campos de enriquecimiento de perfil
+                        ExtendedDescription = !reader.IsDBNull(reader.GetOrdinal("ExtendedDescription")) 
+                            ? reader.GetString("ExtendedDescription") : string.Empty,
+                        Hobbies = !reader.IsDBNull(reader.GetOrdinal("Hobbies")) 
+                            ? reader.GetString("Hobbies") : string.Empty,
+                        FavoriteBooks = !reader.IsDBNull(reader.GetOrdinal("FavoriteBooks")) 
+                            ? reader.GetString("FavoriteBooks") : string.Empty,
+                        FavoriteMovies = !reader.IsDBNull(reader.GetOrdinal("FavoriteMovies")) 
+                            ? reader.GetString("FavoriteMovies") : string.Empty,
+                        FavoriteMusic = !reader.IsDBNull(reader.GetOrdinal("FavoriteMusic")) 
+                            ? reader.GetString("FavoriteMusic") : string.Empty,
+                        InstagramProfile = !reader.IsDBNull(reader.GetOrdinal("InstagramProfile")) 
+                            ? reader.GetString("InstagramProfile") : string.Empty,
+                        TwitterProfile = !reader.IsDBNull(reader.GetOrdinal("TwitterProfile")) 
+                            ? reader.GetString("TwitterProfile") : string.Empty,
+                        LinkedInProfile = !reader.IsDBNull(reader.GetOrdinal("LinkedInProfile")) 
+                            ? reader.GetString("LinkedInProfile") : string.Empty,
+                        HasEnrichedProfile = !reader.IsDBNull(reader.GetOrdinal("HasEnrichedProfile")) 
+                            ? reader.GetBoolean("HasEnrichedProfile") : false
                     };
                 }
             }
@@ -979,6 +1017,53 @@ namespace campus_love_app.infrastructure.repositories
 
                 int rowsAffected = cmd.ExecuteNonQuery();
                 return rowsAffected > 0;
+            }
+            finally
+            {
+                if (_connection.State == System.Data.ConnectionState.Open)
+                    _connection.Close();
+            }
+        }
+
+        // Método para actualizar el perfil enriquecido de un usuario
+        public bool UpdateEnrichedProfile(User user)
+        {
+            string query = @"
+                UPDATE Users 
+                SET ExtendedDescription = @ExtendedDescription,
+                    Hobbies = @Hobbies,
+                    FavoriteBooks = @FavoriteBooks,
+                    FavoriteMovies = @FavoriteMovies,
+                    FavoriteMusic = @FavoriteMusic,
+                    InstagramProfile = @InstagramProfile,
+                    TwitterProfile = @TwitterProfile,
+                    LinkedInProfile = @LinkedInProfile,
+                    HasEnrichedProfile = TRUE
+                WHERE UserID = @UserID";
+
+            try
+            {
+                if (_connection.State != System.Data.ConnectionState.Open)
+                    _connection.Open();
+
+                using var cmd = new MySqlCommand(query, _connection);
+                cmd.Parameters.AddWithValue("@UserID", user.UserID);
+                cmd.Parameters.AddWithValue("@ExtendedDescription", user.ExtendedDescription ?? string.Empty);
+                cmd.Parameters.AddWithValue("@Hobbies", user.Hobbies ?? string.Empty);
+                cmd.Parameters.AddWithValue("@FavoriteBooks", user.FavoriteBooks ?? string.Empty);
+                cmd.Parameters.AddWithValue("@FavoriteMovies", user.FavoriteMovies ?? string.Empty);
+                cmd.Parameters.AddWithValue("@FavoriteMusic", user.FavoriteMusic ?? string.Empty);
+                cmd.Parameters.AddWithValue("@InstagramProfile", user.InstagramProfile ?? string.Empty);
+                cmd.Parameters.AddWithValue("@TwitterProfile", user.TwitterProfile ?? string.Empty);
+                cmd.Parameters.AddWithValue("@LinkedInProfile", user.LinkedInProfile ?? string.Empty);
+
+                int rowsAffected = cmd.ExecuteNonQuery();
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating enriched profile: {ex.Message}");
+                return false;
             }
             finally
             {

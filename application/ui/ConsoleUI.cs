@@ -116,8 +116,10 @@ namespace campus_love_app.application.ui
                 choices.Add("2. View matches");
                 choices.Add("3. Messages");
                 choices.Add("4. View statistics");
-                choices.Add("5. Logout");
-                choices.Add("6. Exit");
+                choices.Add("5. View daily credits");
+                choices.Add("6. Enrich my profile");
+                choices.Add("7. Logout");
+                choices.Add("8. Exit");
             }
 
             // Create a selector for the main menu
@@ -525,6 +527,76 @@ namespace campus_love_app.application.ui
                 .Header(isMatchScreen ? "[yellow]IT'S A MATCH![/]" : $"[magenta]{(user.IsVerified ? "✓ " : "")}{user.FullName}[/]");
             
             AnsiConsole.Write(profileContent);
+
+            // Si el perfil está enriquecido, mostrar detalles adicionales
+            if (user.HasEnrichedProfile)
+            {
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[bold magenta]Enriched Profile[/]");
+                
+                var enrichedTable = new Table();
+                enrichedTable.Border = TableBorder.Rounded;
+                enrichedTable.BorderColor(Color.HotPink);
+                enrichedTable.HideHeaders();
+                enrichedTable.AddColumn(new TableColumn("Field").Width(15));
+                enrichedTable.AddColumn(new TableColumn("Value"));
+                
+                // Only show fields that have information
+                if (!string.IsNullOrEmpty(user.ExtendedDescription))
+                {
+                    enrichedTable.AddRow("[grey]Description[/]", user.ExtendedDescription);
+                }
+                
+                if (!string.IsNullOrEmpty(user.Hobbies))
+                {
+                    enrichedTable.AddRow("[grey]Hobbies[/]", user.Hobbies);
+                }
+                
+                if (!string.IsNullOrEmpty(user.FavoriteBooks))
+                {
+                    enrichedTable.AddRow("[grey]Books[/]", user.FavoriteBooks);
+                }
+                
+                if (!string.IsNullOrEmpty(user.FavoriteMovies))
+                {
+                    enrichedTable.AddRow("[grey]Movies[/]", user.FavoriteMovies);
+                }
+                
+                if (!string.IsNullOrEmpty(user.FavoriteMusic))
+                {
+                    enrichedTable.AddRow("[grey]Music[/]", user.FavoriteMusic);
+                }
+                
+                // Social media (if available)
+                var socialMediaAvailable = false;
+                var socialMediaPanel = new Panel("");
+                var socialMediaContent = "";
+                
+                if (!string.IsNullOrEmpty(user.InstagramProfile))
+                {
+                    socialMediaContent += $"[blue]Instagram:[/] @{user.InstagramProfile}\n";
+                    socialMediaAvailable = true;
+                }
+                
+                if (!string.IsNullOrEmpty(user.TwitterProfile))
+                {
+                    socialMediaContent += $"[cyan]Twitter:[/] @{user.TwitterProfile}\n";
+                    socialMediaAvailable = true;
+                }
+                
+                if (!string.IsNullOrEmpty(user.LinkedInProfile))
+                {
+                    socialMediaContent += $"[blue]LinkedIn:[/] {user.LinkedInProfile}\n";
+                    socialMediaAvailable = true;
+                }
+                
+                if (socialMediaAvailable)
+                {
+                    enrichedTable.AddRow("[grey]Social Media[/]", socialMediaContent);
+                }
+                
+                AnsiConsole.Write(enrichedTable);
+            }
 
             AnsiConsole.WriteLine();
             if (!isMatchScreen)
@@ -1038,6 +1110,96 @@ namespace campus_love_app.application.ui
         {
             AnsiConsole.MarkupLine("[grey]Press any key to continue...[/]");
             Console.ReadKey(true);
+        }
+
+        // Method to display and edit the enriched profile
+        public void ShowEnrichedProfileEditor(User user)
+        {
+            Console.Clear();
+            DrawHeader("Profile Enrichment");
+            
+            AnsiConsole.MarkupLine("[bold]Enrich your profile to stand out among other users![/]");
+            AnsiConsole.WriteLine();
+            
+            // Show current profile if it has data
+            if (user.HasEnrichedProfile)
+            {
+                var table = new Table();
+                table.AddColumn("Field");
+                table.AddColumn("Current Value");
+                table.Border = TableBorder.Rounded;
+                
+                table.AddRow("Extended Description", string.IsNullOrEmpty(user.ExtendedDescription) ? "[grey]Empty[/]" : user.ExtendedDescription);
+                table.AddRow("Hobbies", string.IsNullOrEmpty(user.Hobbies) ? "[grey]Empty[/]" : user.Hobbies);
+                table.AddRow("Favorite Books", string.IsNullOrEmpty(user.FavoriteBooks) ? "[grey]Empty[/]" : user.FavoriteBooks);
+                table.AddRow("Favorite Movies", string.IsNullOrEmpty(user.FavoriteMovies) ? "[grey]Empty[/]" : user.FavoriteMovies);
+                table.AddRow("Favorite Music", string.IsNullOrEmpty(user.FavoriteMusic) ? "[grey]Empty[/]" : user.FavoriteMusic);
+                table.AddRow("Instagram Profile", string.IsNullOrEmpty(user.InstagramProfile) ? "[grey]Empty[/]" : user.InstagramProfile);
+                table.AddRow("Twitter Profile", string.IsNullOrEmpty(user.TwitterProfile) ? "[grey]Empty[/]" : user.TwitterProfile);
+                table.AddRow("LinkedIn Profile", string.IsNullOrEmpty(user.LinkedInProfile) ? "[grey]Empty[/]" : user.LinkedInProfile);
+                
+                AnsiConsole.Write(table);
+                AnsiConsole.WriteLine();
+            }
+            
+            // Ask if user wants to edit the profile
+            bool editProfile = AnsiConsole.Confirm("Do you want to edit your enriched profile?", true);
+            
+            if (editProfile)
+            {
+                user.ExtendedDescription = AnsiConsole.Ask<string>("Extended description (tell more about yourself):", user.ExtendedDescription ?? string.Empty);
+                user.Hobbies = AnsiConsole.Ask<string>("Hobbies (comma separated):", user.Hobbies ?? string.Empty);
+                user.FavoriteBooks = AnsiConsole.Ask<string>("Favorite books (comma separated):", user.FavoriteBooks ?? string.Empty);
+                user.FavoriteMovies = AnsiConsole.Ask<string>("Favorite movies (comma separated):", user.FavoriteMovies ?? string.Empty);
+                user.FavoriteMusic = AnsiConsole.Ask<string>("Favorite music (artists or genres, comma separated):", user.FavoriteMusic ?? string.Empty);
+                
+                // Social media (optional)
+                AnsiConsole.MarkupLine("[grey]Social media profiles are optional, leave them blank if you don't want to share them[/]");
+                user.InstagramProfile = AnsiConsole.Ask<string>("Instagram username (without @):", user.InstagramProfile ?? string.Empty);
+                user.TwitterProfile = AnsiConsole.Ask<string>("Twitter username (without @):", user.TwitterProfile ?? string.Empty);
+                user.LinkedInProfile = AnsiConsole.Ask<string>("LinkedIn profile URL:", user.LinkedInProfile ?? string.Empty);
+                
+                // Save changes to the database
+                if (_userRepository != null && _userRepository.UpdateEnrichedProfile(user))
+                {
+                    user.HasEnrichedProfile = true;
+                    ShowSuccess("Enriched profile updated successfully!");
+                }
+                else
+                {
+                    ShowError("There was a problem updating your enriched profile.");
+                }
+            }
+            
+            PressAnyKey();
+        }
+
+        public void ShowRemainingCredits()
+        {
+            if (_currentUser == null || _userRepository == null) return;
+            
+            int userId = _currentUser.UserID;
+            int creditsRemaining = _userRepository.GetRemainingCredits(userId);
+            
+            Console.Clear();
+            DrawHeader("Daily Credits");
+            
+            AnsiConsole.MarkupLine("[bold]Daily Like Credits[/]");
+            AnsiConsole.WriteLine();
+            
+            // Create a panel to display the credits
+            var panel = new Panel($"[bold]You have [green]{creditsRemaining}[/] credits remaining today[/]")
+                .Border(BoxBorder.Rounded)
+                .BorderColor(Color.Green)
+                .Padding(2, 1);
+            
+            AnsiConsole.Write(panel);
+            AnsiConsole.WriteLine();
+            
+            AnsiConsole.MarkupLine("[grey]Credits are reset daily. Each like costs 1 credit.[/]");
+            AnsiConsole.MarkupLine("[grey]Use them wisely to connect with people you're interested in![/]");
+            
+            PressAnyKey();
         }
     }
 } 
